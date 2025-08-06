@@ -1,0 +1,56 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Install Dependencies
+      run: poetry install
+
+    - name: Spellcheck
+      run: poetry run codespell ./app ./tests
+
+    - name: Run Tests with Coverage
+      run: poetry run pytest --cov=app --cov-report=xml
+
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@v2
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    - name: Enforce Coverage Gate
+      run: |
+        COVERAGE=$(poetry run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+        if (( $(echo "$COVERAGE < 95.0" | bc -l) )); then
+          echo "Coverage below 95%! Failing pipeline."
+          exit 1
+        fi
+
+    - name: Docker Build
+      run: docker build -t fastapi-azure-app .
+
+    - name: Deploy to Azure Function
+      uses: Azure/functions-action@v1
+      with:
+        app-name: 'your-azure-func-name'
+        package: '.'
+        publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
