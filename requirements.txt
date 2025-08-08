@@ -3,5 +3,6 @@ uvicorn
 pytest
 httpx
 pytest-cov
+pytest
 codespell
 coverage
