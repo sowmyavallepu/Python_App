@@ -30,6 +30,9 @@ flake8 = "^6.0.0"
 where = ["."]
 include = ["app*"]
 
+[tool.poetry]
+package-mode = false
+
 # [build-system]
 # requires = ["setuptools>=61.0", "wheel"]
 # build-backend = "setuptools.build_meta"
