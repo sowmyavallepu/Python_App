@@ -7,7 +7,7 @@ name = "fastapi-azure-app"
 version = "0.1.0"
 description = "FastAPI application for Azure deployment"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.8.1"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -40,7 +40,7 @@ include = ["app*"]
 # version = "0.1.0"
 # description = "FastAPI application for Azure deployment"
 # readme = "README.md"
-# requires-python = ">=3.8"
+# requires-python = ">=3.8.1"
 # classifiers = [
 #     "Programming Language :: Python :: 3",
 #     "License :: OSI Approved :: MIT License",
