@@ -32,8 +32,8 @@ jobs:
     - name: Run Tests with Coverage
       run: poetry run pytest --cov=app --cov-report=xml
 
-    - name: SonarCloud Scan
-      uses: SonarSource/sonarcloud-github-action@v2
+    - name: Sonarqube Scan
+      uses: SonarSource/sonarqube-scan-action@v2
       env:
         SONAR_TOKEN: sqp_5efbf44697a0b791153bd56400a55b491be8bed7
         SONAR_HOST_URL: http://20.119.100.65:9000
