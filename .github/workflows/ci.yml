@@ -30,7 +30,7 @@ jobs:
       run: poetry run codespell ./app ./tests
       
     - name: Install dev dependencies
-    run: poetry add --group dev codespell
+      run: poetry add --group dev codespell
 
     - name: Run Tests with Coverage
       run: poetry run pytest --cov=app --cov-report=xml
