@@ -50,7 +50,7 @@ jobs:
       uses: SonarSource/sonarqube-scan-action@v2
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: http://20.119.100.65:8000
+        SONAR_HOST_URL: http://20.119.100.65:9000
 
     - name: Docker Build
       run: docker build -t fastapi-azure-app .
