@@ -23,14 +23,14 @@ jobs:
         curl -sSL https://install.python-poetry.org | python3 -
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+    - name: Install dev dependencies
+      run: poetry add --group dev codespell
+
     - name: Install Dependencies
       run: poetry install
 
     - name: Spellcheck
       run: poetry run codespell ./app ./tests
-      
-    - name: Install dev dependencies
-      run: poetry add --group dev codespell
 
     - name: Run Tests with Coverage
       run: poetry run pytest --cov=app --cov-report=xml
