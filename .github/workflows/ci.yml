@@ -32,19 +32,20 @@ jobs:
     - name: Run Tests with Coverage
       run: poetry run pytest --cov=app --cov-report=xml
 
-    - name: Sonarqube Scan
-      uses: SonarSource/sonarqube-scan-action@v2
-      env:
-        SONAR_TOKEN: sqp_5efbf44697a0b791153bd56400a55b491be8bed7
-        SONAR_HOST_URL: http://20.119.100.65:9000
-
     - name: Enforce Coverage Gate
       run: |
         COVERAGE=$(poetry run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+        echo "Coverage is $COVERAGE%"
         if (( $(echo "$COVERAGE < 95.0" | bc -l) )); then
           echo "Coverage below 95%! Failing pipeline."
           exit 1
         fi
+
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@v2
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: http://20.119.100.65:9000
 
     - name: Docker Build
       run: docker build -t fastapi-azure-app .
