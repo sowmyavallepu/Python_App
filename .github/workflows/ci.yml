@@ -35,7 +35,8 @@ jobs:
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
       env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_TOKEN: sqp_5efbf44697a0b791153bd56400a55b491be8bed7
+        SONAR_HOST_URL: http://20.119.100.65:9000
 
     - name: Enforce Coverage Gate
       run: |
