@@ -2,8 +2,6 @@
 name = "fastapi-azure-app"
 version = "0.1.0"
 description = "FastAPI application for Azure deployment"
-authors = ["Your Name <youremail@gmail.com>"]
-readme = "README.md"
 license = "MIT"
 # repository line removed
 keywords = ["fastapi", "azure", "deployment"]
