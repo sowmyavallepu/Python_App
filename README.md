@@ -1,6 +1,6 @@
-#FastAPI Azure App – Project Summary & Quality Report
+# FastAPI Azure App – Project Summary & Quality Report
 
-#Overview
+# Overview
 
 This project demonstrates deploying a FastAPI application to Azure Functions using GitHub Actions for CI/CD and SonarQube for continuous code quality and coverage analysis.
 
