@@ -30,6 +30,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Spellcheck
+      run: poetry run codespell ./app ./tests
+
+    - name: Run Tests with Coverage
+      run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
+        poetry run pytest --cov=app --cov-report=xml
+
       # Optional: Add step to run tests here
 
       - name: Zip artifact for deployment
@@ -77,3 +85,4 @@ jobs:
           app-name: 'fastapifn'
           slot-name: 'Production'
           package: release.zip
+
