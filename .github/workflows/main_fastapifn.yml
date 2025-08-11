@@ -31,12 +31,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Spellcheck
-      run: poetry run codespell ./app ./tests
+        run: poetry run codespell ./app ./tests
 
-    - name: Run Tests with Coverage
-      run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)
-        poetry run pytest --cov=app --cov-report=xml
+      - name: Run Tests with Coverage
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          poetry run pytest --cov=app --cov-report=xml
 
       # Optional: Add step to run tests here
 
@@ -63,11 +63,12 @@ jobs:
         with:
           name: python-app
 
+      # Consider removing this debug step after verifying secrets
       - name: Debug Secrets
         run: |
-          echo "Client ID: ${{secrets.AZUREAPPSERVICE_CLIENTID_D0C1A5DA3BD14CBBBD0E290374C83C70 }}"
-          echo "Tenant ID: ${{secrets.AZUREAPPSERVICE_TENANTID_163E26995DCA4EF38CEE24F367ECE934 }}"
-          echo "Subscription ID: ${{secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7553735F7720417097487F0E93ED9912 }}"
+          echo "Client ID: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D0C1A5DA3BD14CBBBD0E290374C83C70 }}"
+          echo "Tenant ID: ${{ secrets.AZUREAPPSERVICE_TENANTID_163E26995DCA4EF38CEE24F367ECE934 }}"
+          echo "Subscription ID: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7553735F7720417097487F0E93ED9912 }}"
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -75,7 +76,7 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D0C1A5DA3BD14CBBBD0E290374C83C70 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_163E26995DCA4EF38CEE24F367ECE934 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7553735F7720417097487F0E93ED9912 }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}  # Verify this secret name matches your GitHub secrets
           enable-AzPSSession: false
           allow-no-subscriptions: true
 
@@ -86,6 +87,3 @@ jobs:
           app-name: 'fastapifn'
           slot-name: 'Production'
           package: release.zip
-
-
-
