@@ -19,9 +19,10 @@ jobs:
           python-version: '3.10'
 
       - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: false
 
       - name: Install dependencies including dev
         run: poetry install --with dev
@@ -55,7 +56,12 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D0C1A5DA3BD14CBBBD0E290374C83C70 }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_163E26995DCA4EF38CEE24F367ECE934 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7553735F7720417097487F0E93ED9912 }}
+          enable-AzPSSession: false
+          allow-no-subscriptions: true
 
       - name: Deploy to Azure Function
         uses: Azure/functions-action@v1
