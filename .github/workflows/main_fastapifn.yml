@@ -75,6 +75,7 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D0C1A5DA3BD14CBBBD0E290374C83C70 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_163E26995DCA4EF38CEE24F367ECE934 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7553735F7720417097487F0E93ED9912 }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           enable-AzPSSession: false
           allow-no-subscriptions: true
 
@@ -85,5 +86,6 @@ jobs:
           app-name: 'fastapifn'
           slot-name: 'Production'
           package: release.zip
+
 
 
