@@ -21,7 +21,7 @@ This project demonstrates deploying a FastAPI application to Azure Functions usi
 
 The FastAPI app is deployed and accessible. Example response from the application:
 
-![image](screenshot-49.png)
+![alt text](Screenshot-49.png)
 
 ---
 
