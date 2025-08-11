@@ -27,10 +27,11 @@ jobs:
           version: latest
           virtualenvs-create: false
 
-          
-      - name: Check Poetry Version     
-        run: poetry --version
+      - name: Add Poetry to PATH  # <-- ADD THIS STEP
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      - name: Check Poetry Version
+        run: poetry --version
 
       - name: Install dependencies including dev
         run: poetry install --with dev
