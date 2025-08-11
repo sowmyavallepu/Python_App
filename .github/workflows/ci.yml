@@ -26,7 +26,6 @@ jobs:
         with:
           version: latest
           virtualenvs-create: false
-          add-to-path: true
 
       - name: Check Poetry Version
         run: |
