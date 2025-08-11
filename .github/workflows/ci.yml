@@ -10,59 +10,59 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    - name: Install Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-    - name: Install dev dependencies
-      run: poetry add --group dev codespell
+      - name: Install dev dependencies
+        run: poetry install --with dev
 
-    - name: Install Dependencies
-      run: poetry install
+      - name: Install Dependencies
+        run: poetry install
 
-    - name: Spellcheck
-      run: poetry run codespell ./app ./tests
+      - name: Spellcheck
+        run: poetry run codespell ./app ./tests
 
-    - name: Run Tests with Coverage
-      run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)
-        poetry run pytest --cov=app --cov-report=xml
+      - name: Run Tests with Coverage
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          poetry run pytest --cov=app --cov-report=xml
 
-    - name: Enforce Coverage Gate
-      run: |
-        COVERAGE=$(poetry run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
-        echo "Coverage is $COVERAGE%"
-        if (( $(echo "$COVERAGE < 95.0" | bc -l) )); then
-          echo "Coverage below 95%! Failing pipeline."
-          exit 1
-        fi
+      - name: Enforce Coverage Gate
+        run: |
+          COVERAGE=$(poetry run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
+          echo "Coverage is $COVERAGE%"
+          if (( $(echo "$COVERAGE < 95.0" | bc -l) )); then
+            echo "Coverage below 95%! Failing pipeline."
+            exit 1
+          fi
 
-    - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v2
-      env:
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v2
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-    - name: Docker Build
-      run: docker build -t fastapi-azure-app .
+      - name: Docker Build
+        run: docker build -t fastapi-azure-app .
 
-    - name: Login to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Deploy to Azure Function
-      uses: Azure/functions-action@v1
-      with:
-        app-name: 'your-azure-func-name'
-        package: '.'
-        publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+      - name: Deploy to Azure Function
+        uses: Azure/functions-action@v1
+        with:
+          app-name: 'fastapifn'                  # Replace with your actual Azure Function app name
+          package: '.'
+          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
