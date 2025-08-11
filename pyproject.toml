@@ -5,7 +5,7 @@ description = "FastAPI application for Azure deployment"
 authors = ["Your Name <youremail@gmail.com>"]
 readme = "README.md"
 license = "MIT"
-repository = ""
+# repository line removed
 keywords = ["fastapi", "azure", "deployment"]
 
 [tool.poetry.dependencies]
