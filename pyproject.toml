@@ -5,12 +5,11 @@ description = "FastAPI application for Azure deployment"
 authors = ["Your Name <youremail@gmail.com>"]
 readme = "README.md"
 license = "MIT"
-homepage = ""
 repository = ""
 keywords = ["fastapi", "azure", "deployment"]
-python = "^3.10"
 
 [tool.poetry.dependencies]
+python = "^3.10"
 fastapi = "^0.110.3"
 uvicorn = "^0.27.1"
 httpx = "^0.27.2"
