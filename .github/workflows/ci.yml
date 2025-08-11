@@ -27,6 +27,9 @@ jobs:
           version: latest
           virtualenvs-create: false
 
+      - name: Poetry version check
+        run: poetry --version
+
       - name: Install dependencies including dev
         run: poetry install --with dev
 
@@ -68,6 +71,6 @@ jobs:
       - name: Deploy to Azure Function
         uses: Azure/functions-action@v1
         with:
-          app-name: 'fastapifn'                  # Replace with your actual Azure Function app name
+          app-name: 'fastapifn'
           package: '.'
           publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
