@@ -26,28 +26,32 @@ jobs:
         with:
           version: latest
           virtualenvs-create: false
-
-      - name: Add Poetry to PATH
-        run: |
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+          add-to-path: true
 
       - name: Check Poetry Version
-        run: poetry --version
+        run: |
+          export PATH="$HOME/.local/bin:$HOME/.poetry/bin:$PATH"
+          poetry --version
 
       - name: Install dependencies including dev
-        run: poetry install --with dev
+        run: |
+          export PATH="$HOME/.local/bin:$HOME/.poetry/bin:$PATH"
+          poetry install --with dev
 
       - name: Spellcheck
-        run: poetry run codespell ./app ./tests
+        run: |
+          export PATH="$HOME/.local/bin:$HOME/.poetry/bin:$PATH"
+          poetry run codespell ./app ./tests
 
       - name: Run Tests with Coverage
         run: |
+          export PATH="$HOME/.local/bin:$HOME/.poetry/bin:$PATH"
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           poetry run pytest --cov=app --cov-report=xml
 
       - name: Enforce Coverage Gate
         run: |
+          export PATH="$HOME/.local/bin:$HOME/.poetry/bin:$PATH"
           COVERAGE=$(poetry run coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
           echo "Coverage is $COVERAGE%"
           if (( $(echo "$COVERAGE < 95.0" | bc -l) )); then
