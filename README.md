@@ -29,7 +29,7 @@ The FastAPI app is deployed and accessible. Example response from the applicatio
 
 Automated pipeline for build and deploy is successful:
 
-![image2](image2)
+![image2](Screenshot-50.png)
 
 ---
 
