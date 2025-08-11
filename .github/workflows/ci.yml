@@ -27,9 +27,6 @@ jobs:
           version: latest
           virtualenvs-create: false
 
-      - name: Poetry version check
-        run: poetry --version
-
       - name: Install dependencies including dev
         run: poetry install --with dev
 
