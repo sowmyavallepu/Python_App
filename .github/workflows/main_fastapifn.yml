@@ -65,9 +65,9 @@ jobs:
 
       - name: Debug Secrets
         run: |
-          echo "Client ID: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D0C1A5DA3BD14CBBBD0E290374C83C70 }}"
-          echo "Tenant ID: ${{ secrets.AZUREAPPSERVICE_TENANTID_163E26995DCA4EF38CEE24F367ECE934 }}"
-          echo "Subscription ID: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7553735F7720417097487F0E93ED9912 }}"
+          echo "Client ID: ${{secrets.AZUREAPPSERVICE_CLIENTID_D0C1A5DA3BD14CBBBD0E290374C83C70 }}"
+          echo "Tenant ID: ${{secrets.AZUREAPPSERVICE_TENANTID_163E26995DCA4EF38CEE24F367ECE934 }}"
+          echo "Subscription ID: ${{secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7553735F7720417097487F0E93ED9912 }}"
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -85,4 +85,5 @@ jobs:
           app-name: 'fastapifn'
           slot-name: 'Production'
           package: release.zip
+
 
