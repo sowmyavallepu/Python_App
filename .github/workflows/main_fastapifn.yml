@@ -116,6 +116,15 @@ jobs:
         echo "=== Requirements.txt Contents ==="
         cat requirements.txt || echo "No requirements.txt found"
 
+    - name: Debug - Check publish profile secret (first 50 chars)
+      run: |
+        if [ -n "${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" ]; then
+          echo "✅ Publish profile secret is available"
+          echo "First 50 characters: $(echo '${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}' | head -c 50)..."
+        else
+          echo "❌ Publish profile secret is missing or empty"
+        fi
+
     - name: Deploy to Azure Function App
       uses: Azure/functions-action@v1
       id: deploy-to-function
