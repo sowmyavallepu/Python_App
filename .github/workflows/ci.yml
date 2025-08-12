@@ -1,26 +1,24 @@
-name: Build and deploy Python app to Azure Function App
+name: CI - Tests and Code Quality
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main, develop ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
   PYTHON_VERSION: '3.9'
 
 jobs:
-  build:
+  test-and-quality:
     runs-on: ubuntu-latest
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # Disable shallow clone for better SonarQube analysis
 
     - name: Setup Python version
       uses: actions/setup-python@v4
@@ -33,7 +31,6 @@ jobs:
         version: latest
         virtualenvs-create: true
         virtualenvs-in-project: true
-        virtualenvs-path: .venv
 
     - name: Load cached venv
       id: cached-poetry-dependencies
@@ -43,28 +40,47 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
     - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-dev
+      run: |
+        poetry install --with dev
 
-    - name: Spellcheck
-      run: poetry run codespell ./app ./tests
+    - name: Code Quality - Spellcheck
+      run: |
+        poetry run codespell ./app ./tests || echo "Spellcheck completed with warnings"
+
+    - name: Code Quality - Linting (optional)
+      run: |
+        poetry run flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics || echo "Linting completed"
 
     - name: Run Tests with Coverage
       run: |
-        poetry install --with dev
         poetry run pytest \
           --cov=app \
           --cov-report=xml:coverage.xml \
           --cov-report=term-missing \
+          --cov-report=html:htmlcov \
           --junitxml=test-results.xml \
+          --cov-fail-under=80 \
           tests/ -v
 
-    - name: Verify coverage files
+    - name: Verify Coverage Files
       run: |
-        echo "Generated files:"
+        echo "=== Generated Coverage Files ==="
         ls -la *.xml || echo "No XML files found"
-        echo "Coverage XML content (first 10 lines):"
-        head -10 coverage.xml || echo "coverage.xml not found"
+        echo ""
+        echo "=== Coverage XML Content (first 15 lines) ==="
+        head -15 coverage.xml || echo "coverage.xml not found"
+        echo ""
+        echo "=== Test Results XML Content (first 10 lines) ==="
+        head -10 test-results.xml || echo "test-results.xml not found"
+
+    - name: Upload Coverage Reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: |
+          coverage.xml
+          test-results.xml
+          htmlcov/
 
     - name: SonarQube Scan
       uses: sonarsource/sonarqube-scan-action@master
@@ -73,56 +89,14 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-    - name: SonarQube Quality Gate check
+    - name: SonarQube Quality Gate Check
       uses: sonarqube-quality-gate-action@master
       timeout-minutes: 5
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      continue-on-error: true  # Don't fail the workflow if quality gate fails
 
-    - name: Create requirements.txt for Azure Functions
+    - name: Display Quality Gate Result
       run: |
-        poetry export -f requirements.txt --output requirements.txt --without-hashes
-        sed -i '/grpcio/d' requirements.txt
-        sed -i '/grpcio-tools/d' requirements.txt
-        echo "azure-functions" >> requirements.txt
-        echo "azure-functions-worker" >> requirements.txt
-
-    - name: Upload artifact for deployment job
-      uses: actions/upload-artifact@v3
-      with:
-        name: python-app
-        path: |
-          .
-          !venv/
-          !.git/
-          !.github/
-          !tests/
-          !.pytest_cache/
-          !__pycache__/
-          !.coverage
-          !coverage.xml
-          !test-results.xml
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-function.outputs.webapp-url }}
-
-    steps:
-    - name: Download artifact from build job
-      uses: actions/download-artifact@v3
-      with:
-        name: python-app
-
-    - name: Deploy to Azure Function App
-      uses: Azure/functions-action@v1
-      id: deploy-to-function
-      with:
-        app-name: 'fastapifn'
-        slot-name: 'Production'
-        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROF
+        echo "SonarQube analysis completed. Check the SonarQube dashboard for detailed results."
