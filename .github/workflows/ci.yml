@@ -1,41 +1,63 @@
-# Update your GitHub Actions workflow to fix SonarQube coverage
-
-name: Build and Deploy with SonarQube
+name: Build and deploy Python app to Azure Function App
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
+  PYTHON_VERSION: '3.9'
 
 jobs:
-  test-and-sonar:
+  build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Important for SonarQube
+        fetch-depth: 0
 
-    - name: Set up Python
+    - name: Setup Python version
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        virtualenvs-path: .venv
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pytest pytest-cov fastapi httpx
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-dev
 
-    - name: Run tests with coverage
+    - name: Spellcheck
+      run: poetry run codespell ./app ./tests
+
+    - name: Run Tests with Coverage
       run: |
-        # Run tests and generate coverage
-        python -m pytest tests/ \
+        poetry install --with dev
+        poetry run pytest \
           --cov=app \
           --cov-report=xml:coverage.xml \
           --cov-report=term-missing \
           --junitxml=test-results.xml \
-          -v
+          tests/ -v
 
     - name: Verify coverage files
       run: |
@@ -45,16 +67,62 @@ jobs:
         head -10 coverage.xml || echo "coverage.xml not found"
 
     - name: SonarQube Scan
-      uses: sonarqube-quality-gate-action@master
+      uses: sonarsource/sonarqube-scan-action@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+    - name: SonarQube Quality Gate check
+      uses: sonarqube-quality-gate-action@master
+      timeout-minutes: 5
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+    - name: Create requirements.txt for Azure Functions
+      run: |
+        poetry export -f requirements.txt --output requirements.txt --without-hashes
+        sed -i '/grpcio/d' requirements.txt
+        sed -i '/grpcio-tools/d' requirements.txt
+        echo "azure-functions" >> requirements.txt
+        echo "azure-functions-worker" >> requirements.txt
+
+    - name: Upload artifact for deployment job
+      uses: actions/upload-artifact@v3
       with:
-        args: >
-          -Dsonar.projectKey=Python_App
-          -Dsonar.sources=app
-          -Dsonar.tests=tests
-          -Dsonar.python.coverage.reportPaths=coverage.xml
-          -Dsonar.python.xunit.reportPath=test-results.xml
-          -Dsonar.coverage.exclusions=tests/**,**/__init__.py
+        name: python-app
+        path: |
+          .
+          !venv/
+          !.git/
+          !.github/
+          !tests/
+          !.pytest_cache/
+          !__pycache__/
+          !.coverage
+          !coverage.xml
+          !test-results.xml
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-function.outputs.webapp-url }}
+
+    steps:
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v3
+      with:
+        name: python-app
+
+    - name: Deploy to Azure Function App
+      uses: Azure/functions-action@v1
+      id: deploy-to-function
+      with:
+        app-name: 'fastapifn'
+        slot-name: 'Production'
+        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROF
