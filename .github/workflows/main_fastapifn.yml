@@ -1,4 +1,4 @@
-name: Build and deploy Python project to Azure Function App - fastapifn
+name: Build and deploy Python app to Azure Function App
 
 on:
   push:
@@ -7,83 +7,89 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # Path to your app ('.' is repo root)
-  PYTHON_VERSION: '3.10'
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'
+  PYTHON_VERSION: '3.9'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Setup Python version
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+    - name: Setup Python version
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        virtualenvs-path: .venv
 
-      - name: Spellcheck
-        run: poetry run codespell ./app ./tests
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Run Tests with Coverage
-        run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          poetry run pytest --cov=app --cov-report=xml
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-dev
 
-      # Optional: Add step to run tests here
+    - name: Spellcheck
+      run: poetry run codespell ./app ./tests
 
-      - name: Zip artifact for deployment
-        run: |
-          zip -r release.zip . -x "venv/*" ".git/*" ".github/*"
+    - name: Run Tests with Coverage
+      run: |
+        poetry install --with dev
+        poetry run pytest --cov=app tests/
 
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app
-          path: release.zip
+    - name: Create requirements.txt for Azure Functions
+      run: |
+        poetry export -f requirements.txt --output requirements.txt --without-hashes
+        # Remove development dependencies that might cause issues
+        sed -i '/grpcio/d' requirements.txt
+        sed -i '/grpcio-tools/d' requirements.txt
+        # Add essential Azure Functions dependencies
+        echo "azure-functions" >> requirements.txt
+        echo "azure-functions-worker" >> requirements.txt
+
+    - name: Upload artifact for deployment job
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-app
+        path: |
+          .
+          !venv/
+          !.git/
+          !.github/
+          !tests/
+          !.pytest_cache/
+          !__pycache__/
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    permissions:
-      id-token: write
-      contents: read
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-function.outputs.webapp-url }}
 
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v3
+      with:
+        name: python-app
 
-      # Consider removing this debug step after verifying secrets
-      - name: Debug Secrets
-        run: |
-          echo "Client ID: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D0C1A5DA3BD14CBBBD0E290374C83C70 }}"
-          echo "Tenant ID: ${{ secrets.AZUREAPPSERVICE_TENANTID_163E26995DCA4EF38CEE24F367ECE934 }}"
-          echo "Subscription ID: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7553735F7720417097487F0E93ED9912 }}"
-
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_D0C1A5DA3BD14CBBBD0E290374C83C70 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_163E26995DCA4EF38CEE24F367ECE934 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7553735F7720417097487F0E93ED9912 }}
-          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}  # Verify this secret name matches your GitHub secrets
-          enable-AzPSSession: false
-          allow-no-subscriptions: true
-
-      - name: Deploy to Azure Functions
-        uses: Azure/functions-action@v1
-        id: deploy-to-function
-        with:
-          app-name: 'fastapifn'
-          slot-name: 'Production'
-          package: release.zip
+    - name: Deploy to Azure Function App
+      uses: Azure/functions-action@v1
+      id: deploy-to-function
+      with:
+        app-name: 'your-function-app-name'  # Replace with your actual function app name
+        slot-name: 'Production'
+        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
