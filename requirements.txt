@@ -7,3 +7,4 @@ pytest
 codespell
 coverage
 azure-functions
+starlette
