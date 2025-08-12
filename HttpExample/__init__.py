@@ -1,18 +1,37 @@
 import azure.functions as func
 import logging
+import json
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('Python HTTP trigger function processed a request.')
     
     try:
-        # Simple response without any complex logic
+        # Get method and basic info
+        method = req.method
+        url = req.url
+        
+        # Create response data
+        response_data = {
+            "message": "Hello from Azure Functions!",
+            "method": method,
+            "url": url,
+            "status": "success"
+        }
+        
         return func.HttpResponse(
-            "Hello, World! This Azure Function is working.",
+            json.dumps(response_data),
+            mimetype="application/json",
             status_code=200
         )
+        
     except Exception as e:
         logging.error(f'Error: {str(e)}')
+        error_data = {
+            "error": str(e),
+            "status": "failed"
+        }
         return func.HttpResponse(
-            f"Error: {str(e)}",
+            json.dumps(error_data),
+            mimetype="application/json",
             status_code=500
         )
