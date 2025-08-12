@@ -124,7 +124,7 @@ jobs:
       uses: Azure/functions-action@v1
       id: deploy-to-function
       with:
-        app-name: 'fastapifn'
+        app-name: 'fn'
         package: '.'
         publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
 
@@ -132,4 +132,5 @@ jobs:
       run: |
         echo "🚀 Deployment completed successfully!"
         echo "Function App URL: ${{ steps.deploy-to-function.outputs.webapp-url }}"
+
 
