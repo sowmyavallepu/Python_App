@@ -98,7 +98,7 @@ jobs:
           !.pytest_cache/
           !__pycache__/
 
-deploy:
+  deploy:
     runs-on: ubuntu-latest
     needs: build
 
@@ -128,6 +128,3 @@ deploy:
       run: |
         echo "🚀 Deployment completed successfully!"
         echo "Function App URL: https://fastapifn-c4b9d4f4dqd7fhdf.canadacentral-01.azurewebsites.net"
-
-
-
