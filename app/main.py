@@ -20,7 +20,7 @@ async def read_root():
     # a = 10
     # b = 5
     # print(a <> b)
-    logger.info(f"Comparing {a} != {b}: {a != b}")  # Use logging instead of print
+   # logger.info(f"Comparing {a} != {b}: {a != b}")  # Use logging instead of print
     return {"message": "Hello World from FastAPI on Azure!"}
 
 @app.get("/items/{item_id}")
