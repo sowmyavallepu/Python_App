@@ -119,18 +119,17 @@ jobs:
         echo "=== Requirements.txt Contents ==="
         cat requirements.txt || echo "No requirements.txt found"
 
-    - name: Deploy to Azure Function App
+    # Try a simpler deployment approach
+    - name: Deploy to Azure Function App (Zip Deploy)
       uses: Azure/functions-action@v1
       id: deploy-to-function
       with:
         app-name: 'fastapifn'
-        slot-name: 'Production'
-        package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        package: '.'
         publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
-        scm-do-build-during-deployment: true
-        enable-oryx-build: true
 
     - name: Deployment Success Notification
       run: |
         echo "🚀 Deployment completed successfully!"
         echo "Function App URL: ${{ steps.deploy-to-function.outputs.webapp-url }}"
+
