@@ -8,4 +8,3 @@ codespell
 coverage
 starlette
 azure-functions
-azure-functions-worker
