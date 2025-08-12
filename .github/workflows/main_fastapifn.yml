@@ -98,12 +98,9 @@ jobs:
           !.pytest_cache/
           !__pycache__/
 
-  deploy:
+deploy:
     runs-on: ubuntu-latest
     needs: build
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-function.outputs.webapp-url }}
 
     steps:
     - name: Download artifact from build job
@@ -119,18 +116,18 @@ jobs:
         echo "=== Requirements.txt Contents ==="
         cat requirements.txt || echo "No requirements.txt found"
 
-    # Try a simpler deployment approach
-    - name: Deploy to Azure Function App (Zip Deploy)
+    - name: Deploy to Azure Function App
       uses: Azure/functions-action@v1
       id: deploy-to-function
       with:
-        app-name: 'fn'
+        app-name: 'fastapifn'
         package: '.'
         publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
 
     - name: Deployment Success Notification
       run: |
         echo "🚀 Deployment completed successfully!"
-        echo "Function App URL: ${{ steps.deploy-to-function.outputs.webapp-url }}"
+        echo "Function App URL: https://fastapifn-c4b9d4f4dqd7fhdf.canadacentral-01.azurewebsites.net"
+
 
 
