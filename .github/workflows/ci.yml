@@ -47,7 +47,7 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$HOME/.poetry/bin:$PATH"
           export PYTHONPATH=$PYTHONPATH:$(pwd)
-          poetry run pytest --cov=app --cov-report=xml
+          poetry run pytest --cov=app --cov-report=xml --cov-report=term
 
       - name: Enforce Coverage Gate
         run: |
