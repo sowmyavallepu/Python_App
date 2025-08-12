@@ -74,7 +74,7 @@ jobs:
         head -10 test-results.xml || echo "test-results.xml not found"
 
     - name: Upload Coverage Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-reports
         path: |
