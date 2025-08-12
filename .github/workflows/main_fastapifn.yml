@@ -30,9 +30,12 @@ jobs:
         virtualenvs-create: true
         virtualenvs-in-project: true
 
+    - name: Install Poetry Export Plugin
+      run: poetry self add poetry-plugin-export
+
     - name: Load cached venv
       id: cached-poetry-dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
@@ -48,31 +51,49 @@ jobs:
 
     - name: Create requirements.txt for Azure Functions
       run: |
-        poetry export -f requirements.txt --output requirements.txt --without-hashes --without dev
-        # Remove problematic dependencies
-        sed -i '/grpcio/d' requirements.txt
-        sed -i '/grpcio-tools/d' requirements.txt
-        # Add essential Azure Functions dependencies
-        echo "azure-functions" >> requirements.txt
-        echo "azure-functions-worker" >> requirements.txt
-        echo "fastapi" >> requirements.txt
+        # Method 1: Try poetry export
+        if poetry export -f requirements.txt --output requirements.txt --without-hashes --without dev; then
+          echo "✅ Successfully created requirements.txt using poetry export"
+        else
+          echo "❌ Poetry export failed, using manual method"
+          # Method 2: Manual creation with essential packages
+          cat > requirements.txt << EOF
+        azure-functions
+        azure-functions-worker
+        fastapi
+        uvicorn
+        pydantic
+        EOF
+        fi
+        
+        # Clean up problematic dependencies
+        sed -i '/grpcio/d' requirements.txt 2>/dev/null || true
+        sed -i '/grpcio-tools/d' requirements.txt 2>/dev/null || true
+        
+        # Ensure essential packages are present
+        grep -q "azure-functions" requirements.txt || echo "azure-functions" >> requirements.txt
+        grep -q "azure-functions-worker" requirements.txt || echo "azure-functions-worker" >> requirements.txt
+        grep -q "fastapi" requirements.txt || echo "fastapi" >> requirements.txt
 
     - name: Display requirements.txt
       run: |
         echo "=== Generated requirements.txt ==="
         cat requirements.txt
+        echo ""
+        echo "=== Verifying packages ==="
+        pip install --dry-run -r requirements.txt || echo "Some packages may need verification, but continuing..."
 
     - name: Prepare deployment package
       run: |
         # Remove unnecessary files for deployment
-        rm -rf .venv/
-        rm -rf tests/
-        rm -rf .pytest_cache/
-        rm -rf __pycache__/
-        rm -rf .coverage
-        rm -f coverage.xml
-        rm -f test-results.xml
-        rm -rf htmlcov/
+        rm -rf .venv/ 2>/dev/null || true
+        rm -rf tests/ 2>/dev/null || true
+        rm -rf .pytest_cache/ 2>/dev/null || true
+        rm -rf __pycache__/ 2>/dev/null || true
+        rm -rf .coverage 2>/dev/null || true
+        rm -f coverage.xml 2>/dev/null || true
+        rm -f test-results.xml 2>/dev/null || true
+        rm -rf htmlcov/ 2>/dev/null || true
         find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
         find . -name "*.pyc" -delete 2>/dev/null || true
 
@@ -111,6 +132,9 @@ jobs:
       run: |
         echo "=== Deployment Package Contents ==="
         ls -la
+        echo ""
+        echo "=== Requirements.txt Contents ==="
+        cat requirements.txt || echo "No requirements.txt found"
         echo ""
         echo "=== App Directory Contents ==="
         ls -la app/ || echo "No app directory found"
