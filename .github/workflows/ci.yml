@@ -53,16 +53,32 @@ jobs:
 
     - name: Run Tests with Coverage
       run: |
-        # Add current directory to Python path to help with imports
+        # Add current directory to Python path
         export PYTHONPATH="${PYTHONPATH}:${PWD}"
+        
+        # Run comprehensive tests to achieve 95% coverage
         poetry run pytest \
           --cov=app \
           --cov-report=xml:coverage.xml \
           --cov-report=term-missing \
           --cov-report=html:htmlcov \
           --junitxml=test-results.xml \
-          --cov-fail-under=20 \
-          tests/ -v || echo "Tests completed with issues"
+          --cov-fail-under=93 \
+          tests/ -v --tb=short
+        
+        # Display detailed coverage summary
+        echo "=== DETAILED COVERAGE REPORT ==="
+        poetry run coverage report --show-missing
+        
+        # Extract and display coverage percentage
+        COVERAGE_PERCENT=$(poetry run coverage report | grep TOTAL | awk '{print $4}')
+        echo ""
+        echo "🎯 === FINAL COVERAGE: $COVERAGE_PERCENT ==="
+        echo ""
+        
+        # Show which files have the best/worst coverage
+        echo "=== COVERAGE BY FILE ==="
+        poetry run coverage report --sort=cover
 
     - name: Verify Coverage Files
       run: |
@@ -101,4 +117,7 @@ jobs:
 
     - name: Display Quality Gate Result
       run: |
-        echo "SonarQube analysis completed. Check the SonarQube dashboard for detailed results."
+        echo "✅ SonarQube analysis completed. Check the SonarQube dashboard for detailed results."
+        echo "📊 Note: Quality gate may fail due to intentional duplicate code for demonstration purposes."
+        echo "🎯 Coverage and other metrics are available in the SonarQube dashboard."
+        echo "🔗 Dashboard: ${{ secrets.SONAR_HOST_URL }}/dashboard?id=Python_App"
