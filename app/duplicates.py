@@ -244,3 +244,190 @@ def check_email_format(email: str) -> bool:
         return False
     
     return True  # Simplified version
+
+# Add these duplicate functions to the END of your app/duplicates.py file
+# This will create 5-10% duplication for demo purposes
+
+# Duplicate user management functions (similar to UserService)
+class UserManager:
+    """Duplicate user management class for demo purposes"""
+    
+    def create_user_account(self, name: str, email: str, age: int):
+        """Create a new user account - similar to UserService.create_user"""
+        if not name or len(name) < 2:
+            raise ValueError("Name must be at least 2 characters")
+        if not email or "@" not in email:
+            raise ValueError("Invalid email format")
+        if age < 0 or age > 150:
+            raise ValueError("Invalid age")
+        
+        user_data = {
+            "id": self.generate_user_id(),
+            "name": name,
+            "email": email,
+            "age": age,
+            "created_at": datetime.datetime.now().isoformat(),
+            "updated_at": datetime.datetime.now().isoformat(),
+            "active": True,
+            "role": "user",
+            "permissions": ["read"],
+            "profile": {
+                "bio": "",
+                "avatar": None,
+                "preferences": {
+                    "theme": "light",
+                    "notifications": True
+                }
+            }
+        }
+        return user_data
+
+    def generate_user_id(self):
+        """Generate unique user ID - similar to UserService.generate_id"""
+        import uuid
+        return str(uuid.uuid4())
+
+
+# Duplicate email validation functions
+def check_email_address(email: str) -> bool:
+    """Validate email address format - duplicate of validate_email"""
+    if not email or not isinstance(email, str):
+        return False
+    
+    email = email.strip().lower()
+    
+    # Basic format check
+    if "@" not in email or "." not in email:
+        return False
+    
+    # Split into local and domain parts
+    parts = email.split("@")
+    if len(parts) != 2:
+        return False
+    
+    local, domain = parts
+    
+    # Validate local part
+    if not local or len(local) > 64:
+        return False
+    
+    # Validate domain part
+    if not domain or len(domain) > 255:
+        return False
+    
+    # Check for consecutive dots
+    if ".." in email:
+        return False
+    
+    # Check domain has valid structure
+    domain_parts = domain.split(".")
+    if len(domain_parts) < 2:
+        return False
+    
+    return True
+
+
+def verify_email_format(email: str) -> bool:
+    """Verify email format - another duplicate"""
+    if not email or not isinstance(email, str):
+        return False
+    
+    email = email.strip().lower()
+    
+    if "@" not in email or "." not in email:
+        return False
+    
+    parts = email.split("@")
+    if len(parts) != 2:
+        return False
+    
+    local, domain = parts
+    
+    if not local or len(local) > 64:
+        return False
+    
+    if not domain or len(domain) > 255:
+        return False
+    
+    if ".." in email:
+        return False
+    
+    return True
+
+
+# Duplicate data processing class
+class DataHandler:
+    """Duplicate data processing class for demo"""
+    
+    def handle_data(self, data: List[Dict]):
+        """Handle raw data - similar to DataProcessor.process_data"""
+        if not data:
+            return []
+        
+        handled_results = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            
+            # Validate required fields
+            if "id" not in item or "name" not in item:
+                continue
+            
+            # Clean and format data
+            cleaned_item = {
+                "id": str(item["id"]).strip(),
+                "name": str(item["name"]).strip().title(),
+                "description": item.get("description", "").strip(),
+                "category": item.get("category", "uncategorized").lower(),
+                "tags": [tag.strip().lower() for tag in item.get("tags", [])],
+                "metadata": {
+                    "processed_at": datetime.datetime.now().isoformat(),
+                    "version": "1.0",
+                    "status": "active"
+                }
+            }
+            
+            # Additional processing
+            if cleaned_item["description"]:
+                cleaned_item["word_count"] = len(cleaned_item["description"].split())
+            else:
+                cleaned_item["word_count"] = 0
+            
+            handled_results.append(cleaned_item)
+        
+        return handled_results
+
+
+# Duplicate API response function
+def create_api_response(data: Any, message: str = "Success", status_code: int = 200) -> Dict:
+    """Create API response - duplicate of format_api_response"""
+    response = {
+        "success": status_code < 400,
+        "status_code": status_code,
+        "message": message,
+        "timestamp": datetime.datetime.now().isoformat(),
+        "data": data,
+        "metadata": {
+            "version": "1.0",
+            "api_version": "v1",
+            "response_time": "0.123s",
+            "request_id": f"req_{datetime.datetime.now().timestamp()}"
+        }
+    }
+    
+    # Add pagination info if data is a list
+    if isinstance(data, list):
+        response["metadata"]["count"] = len(data)
+        response["metadata"]["has_more"] = False
+        response["metadata"]["page"] = 1
+        response["metadata"]["per_page"] = len(data)
+    
+    # Add error details for non-success responses
+    if status_code >= 400:
+        response["error"] = {
+            "code": status_code,
+            "message": message,
+            "details": None
+        }
+    
+    return response
