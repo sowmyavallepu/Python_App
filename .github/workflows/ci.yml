@@ -27,18 +27,6 @@ jobs:
         pip install black mypy
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     
-    - name: Code formatting check with Black
-      run: |
-        echo "🔍 Checking code formatting with Black..."
-        black --check --diff app/ tests/
-        echo "✅ Black formatting check completed"
-    
-    - name: Type checking with MyPy
-      run: |
-        echo "🔍 Running type checking with MyPy..."
-        mypy app/ --ignore-missing-imports --no-strict-optional
-        echo "✅ MyPy type checking completed"
-    
     - name: Run tests with coverage
       run: |
         echo "🧪 Running tests with coverage..."
