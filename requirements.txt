@@ -3,8 +3,9 @@ uvicorn
 pytest
 httpx
 pytest-cov
-pytest
 codespell
 coverage
 starlette
 azure-functions
+black==23.11.0
+mypy==1.7.1
