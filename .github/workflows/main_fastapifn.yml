@@ -40,18 +40,27 @@ jobs:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
+    # FIXED: Dependencies step now always completes
     - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --with dev
+      run: |
+        echo "📦 === INSTALLING DEPENDENCIES ==="
+        if [ "${{ steps.cached-poetry-dependencies.outputs.cache-hit }}" = "true" ]; then
+          echo "✅ Dependencies restored from cache"
+          poetry install --with dev --no-interaction
+        else
+          echo "📥 Installing fresh dependencies"
+          poetry install --with dev --no-interaction
+        fi
+        echo "✅ Dependencies installation completed"
 
-    # NEW: Add Spellcheck Step
+    # Add Spellcheck Step
     - name: Code Quality - Spellcheck
       run: |
         echo "🔤 === RUNNING SPELLCHECK ==="
         poetry run codespell ./app ./tests || echo "Spellcheck completed with warnings"
         echo "✅ Spellcheck completed"
 
-    # ENHANCED: Replace Quick Tests with Full Coverage
+    # Enhanced Tests with Full Coverage
     - name: Run Tests with Coverage
       run: |
         echo "🧪 === RUNNING TESTS WITH COVERAGE ==="
@@ -131,7 +140,7 @@ jobs:
           !.pytest_cache/
           !__pycache__/
 
-    # NEW: Upload Coverage Reports
+    # Upload Coverage Reports
     - name: Upload Coverage Reports
       uses: actions/upload-artifact@v4
       with:
@@ -176,16 +185,18 @@ jobs:
         package: '.'
         publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
 
-    # ENHANCED: Better Success Notification
+    # Enhanced Success Notification
     - name: Deployment Success Notification
       run: |
         echo "🚀 === DEPLOYMENT COMPLETED SUCCESSFULLY! ==="
         echo "📍 Function App URL: https://fastapifn-c4b9d4f4dqd7fhdf.canadacentral-01.azurewebsites.net"
         echo ""
         echo "🏆 === BUILD SUMMARY ==="
+        echo "   ✅ Dependencies: Installed successfully"
         echo "   ✅ Spellcheck: Completed"
         echo "   ✅ Test Coverage: Analysis completed"
         echo "   ✅ Package Creation: Success"
         echo "   ✅ Azure Deployment: Success"
         echo ""
         echo "📊 Check the build logs above for detailed coverage reports!"
+        echo "🎯 All build steps completed successfully!"
