@@ -374,3 +374,231 @@ class TestIntegration:
         
         assert user_response["success"] is True
         assert data_response["success"] is True
+
+# Add these tests to the END of your tests/test_comprehensive.py file
+# This will test the duplicate classes and restore 95%+ coverage
+
+class TestDuplicateClasses:
+    """Test the duplicate classes to maintain 95% coverage"""
+    
+    def test_user_manager_duplicate(self):
+        """Test UserManager duplicate class"""
+        from duplicates import UserManager
+        
+        user_manager = UserManager()
+        
+        # Test valid user creation
+        user = user_manager.create_user_account("Jane Doe", "jane@example.com", 28)
+        assert user["name"] == "Jane Doe"
+        assert user["email"] == "jane@example.com"
+        assert user["age"] == 28
+        assert user["role"] == "user"
+        assert user["permissions"] == ["read"]
+        assert user["active"] is True
+        
+        # Test profile structure
+        assert "profile" in user
+        assert user["profile"]["bio"] == ""
+        assert user["profile"]["avatar"] is None
+        assert user["profile"]["preferences"]["theme"] == "light"
+        assert user["profile"]["preferences"]["notifications"] is True
+        
+        # Test validation errors
+        with pytest.raises(ValueError, match="Name must be at least 2 characters"):
+            user_manager.create_user_account("", "test@example.com", 25)
+        
+        with pytest.raises(ValueError, match="Invalid email format"):
+            user_manager.create_user_account("John", "invalid", 25)
+        
+        with pytest.raises(ValueError, match="Invalid age"):
+            user_manager.create_user_account("John", "john@test.com", -1)
+    
+    def test_user_manager_generate_id(self):
+        """Test UserManager ID generation"""
+        from duplicates import UserManager
+        
+        user_manager = UserManager()
+        user_id = user_manager.generate_user_id()
+        
+        assert isinstance(user_id, str)
+        assert len(user_id) == 36  # UUID length
+        
+        # Test uniqueness
+        ids = [user_manager.generate_user_id() for _ in range(3)]
+        assert len(set(ids)) == 3
+    
+    def test_duplicate_email_validators(self):
+        """Test duplicate email validation functions"""
+        from duplicates import check_email_address, verify_email_format
+        
+        # Test check_email_address
+        assert check_email_address("test@example.com") is True
+        assert check_email_address("user@domain.org") is True
+        assert check_email_address("invalid") is False
+        assert check_email_address("") is False
+        assert check_email_address(None) is False
+        assert check_email_address("user@@domain.com") is False
+        assert check_email_address("user@") is False
+        assert check_email_address("@domain.com") is False
+        
+        # Test verify_email_format
+        assert verify_email_format("test@example.com") is True
+        assert verify_email_format("user@domain.org") is True
+        assert verify_email_format("invalid") is False
+        assert verify_email_format("") is False
+        assert verify_email_format(None) is False
+        assert verify_email_format("user@@domain.com") is False
+        
+        # Test length limits
+        long_local = "a" * 65 + "@domain.com"
+        assert check_email_address(long_local) is False
+        assert verify_email_format(long_local) is False
+        
+        # Test consecutive dots
+        assert check_email_address("user..name@domain.com") is False
+        assert verify_email_format("user..name@domain.com") is False
+    
+    def test_data_handler_duplicate(self):
+        """Test DataHandler duplicate class"""
+        from duplicates import DataHandler
+        
+        handler = DataHandler()
+        
+        # Test empty data
+        assert handler.handle_data([]) == []
+        assert handler.handle_data(None) == []
+        
+        # Test invalid items
+        result = handler.handle_data(["string", 123, None])
+        assert result == []
+        
+        # Test missing required fields
+        result = handler.handle_data([
+            {},  # No id or name
+            {"id": "1"},  # Missing name
+            {"name": "Test"}  # Missing id
+        ])
+        assert result == []
+        
+        # Test valid data
+        data = [{
+            "id": 456,
+            "name": "test item",
+            "description": "This is a test description",
+            "category": "TEST_CATEGORY",
+            "tags": ["  Tag1  ", "TAG2", "\tTag3\n"]
+        }]
+        
+        result = handler.handle_data(data)
+        assert len(result) == 1
+        
+        item = result[0]
+        assert item["id"] == "456"  # Int to string
+        assert item["name"] == "Test Item"  # Title case
+        assert item["description"] == "This is a test description"
+        assert item["category"] == "test_category"  # Lowercase
+        assert item["tags"] == ["tag1", "tag2", "tag3"]  # Cleaned
+        assert item["word_count"] == 5
+        
+        # Test metadata
+        assert "metadata" in item
+        assert item["metadata"]["version"] == "1.0"
+        assert item["metadata"]["status"] == "active"
+        assert "processed_at" in item["metadata"]
+        
+        # Test missing optional fields
+        data = [{"id": "1", "name": "Test"}]
+        result = handler.handle_data(data)
+        
+        item = result[0]
+        assert item["description"] == ""
+        assert item["category"] == "uncategorized"
+        assert item["tags"] == []
+        assert item["word_count"] == 0
+    
+    def test_create_api_response_duplicate(self):
+        """Test create_api_response duplicate function"""
+        from duplicates import create_api_response
+        
+        # Test default parameters
+        response = create_api_response({"test": "data"})
+        assert response["success"] is True
+        assert response["status_code"] == 200
+        assert response["message"] == "Success"
+        assert response["data"] == {"test": "data"}
+        assert "timestamp" in response
+        assert "metadata" in response
+        
+        # Test metadata
+        metadata = response["metadata"]
+        assert metadata["version"] == "1.0"
+        assert metadata["api_version"] == "v1"
+        assert metadata["response_time"] == "0.123s"
+        assert "request_id" in metadata
+        
+        # Test custom parameters
+        response = create_api_response(None, "Custom message", 201)
+        assert response["message"] == "Custom message"
+        assert response["status_code"] == 201
+        assert response["success"] is True
+        
+        # Test error response
+        response = create_api_response(None, "Error occurred", 400)
+        assert response["success"] is False
+        assert response["status_code"] == 400
+        assert "error" in response
+        assert response["error"]["code"] == 400
+        assert response["error"]["message"] == "Error occurred"
+        assert response["error"]["details"] is None
+        
+        # Test list data (pagination)
+        list_data = [1, 2, 3, 4, 5]
+        response = create_api_response(list_data)
+        assert "count" in response["metadata"]
+        assert response["metadata"]["count"] == 5
+        assert response["metadata"]["has_more"] is False
+        assert response["metadata"]["page"] == 1
+        assert response["metadata"]["per_page"] == 5
+        
+        # Test non-list data
+        response = create_api_response("string data")
+        assert "count" not in response["metadata"]
+    
+    def test_integration_with_duplicates(self):
+        """Integration test using duplicate classes"""
+        from duplicates import UserManager, DataHandler, create_api_response, check_email_address
+        
+        # Test complete workflow with duplicates
+        user_manager = UserManager()
+        handler = DataHandler()
+        
+        # Create user with UserManager
+        user = user_manager.create_user_account("Integration User", "integration@test.com", 30)
+        
+        # Validate email with duplicate function
+        assert check_email_address(user["email"]) is True
+        
+        # Process data with DataHandler
+        data = [{"id": "1", "name": "Item", "description": "Test item"}]
+        processed = handler.handle_data(data)
+        assert len(processed) == 1
+        
+        # Format response with duplicate function
+        user_response = create_api_response(user)
+        data_response = create_api_response(processed)
+        
+        assert user_response["success"] is True
+        assert data_response["success"] is True
+        
+        # Test that duplicate functions work the same as originals
+        from duplicates import validate_email, format_api_response
+        
+        assert check_email_address("test@example.com") == validate_email("test@example.com")
+        
+        test_data = {"same": "data"}
+        original_response = format_api_response(test_data)
+        duplicate_response = create_api_response(test_data)
+        
+        # Both should have success and same structure
+        assert original_response["success"] == duplicate_response["success"]
+        assert original_response["data"] == duplicate_response["data"]
