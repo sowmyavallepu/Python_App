@@ -1,189 +1,61 @@
-name: CI - Tests and Code Quality
+name: CI Tests and Code Quality
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
-
-env:
-  PYTHON_VERSION: '3.9'
 
 jobs:
   test-and-quality:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v3
       with:
-        fetch-depth: 0  # Disable shallow clone for better SonarQube analysis
-
-    - name: Setup Python version
-      uses: actions/setup-python@v4
+        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+    
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v3
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: latest
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
+        python-version: 3.9
+    
     - name: Install dependencies
       run: |
-        echo "📦 === INSTALLING DEPENDENCIES ==="
-        poetry install --with dev
-        echo "✅ Dependencies installed successfully"
-
-    - name: Code Quality - Spellcheck
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov
+        pip install black mypy
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    
+    - name: Code formatting check with Black
       run: |
-        echo "🔤 === RUNNING SPELLCHECK ==="
-        poetry run codespell ./app ./tests || echo "Spellcheck completed with warnings"
-        echo "✅ Spellcheck completed successfully"
-
-    - name: Code Quality - Linting (optional)
+        echo "🔍 Checking code formatting with Black..."
+        black --check --diff app/ tests/
+        echo "✅ Black formatting check completed"
+    
+    - name: Type checking with MyPy
       run: |
-        echo "🔍 === RUNNING LINTING ==="
-        poetry run flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics || echo "Linting completed"
-        echo "✅ Linting completed successfully"
-
-    - name: Run Tests with Coverage
+        echo "🔍 Running type checking with MyPy..."
+        mypy app/ --ignore-missing-imports --no-strict-optional
+        echo "✅ MyPy type checking completed"
+    
+    - name: Run tests with coverage
       run: |
-        echo "🧪 === RUNNING TESTS WITH COVERAGE ==="
-        # Add current directory to Python path
-        export PYTHONPATH="${PYTHONPATH}:${PWD}"
-        
-        # Run comprehensive tests to achieve 95% coverage
-        poetry run pytest \
-          --cov=app \
-          --cov-report=xml:coverage.xml \
-          --cov-report=term-missing \
-          --cov-report=html:htmlcov \
-          --junitxml=test-results.xml \
-          --cov-fail-under=93 \
-          tests/ -v --tb=short || echo "Some tests failed, but continuing to show coverage results"
-        
-        # Display detailed coverage summary
-        echo ""
-        echo "📊 === DETAILED COVERAGE REPORT ==="
-        poetry run coverage report --show-missing
-        
-        # Extract and display coverage percentage
-        COVERAGE_PERCENT=$(poetry run coverage report | grep TOTAL | awk '{print $4}')
-        echo ""
-        echo "🎯 === FINAL COVERAGE: $COVERAGE_PERCENT ==="
-        echo ""
-        
-        # Show which files have the best/worst coverage
-        echo "=== COVERAGE BY FILE ==="
-        poetry run coverage report --sort=cover
-        
-        # Check if coverage target was met
-        if [[ "$COVERAGE_PERCENT" =~ ^9[5-9]|100 ]]; then
-          echo "✅ SUCCESS: Coverage target of 95% achieved!"
-        else
-          echo "✅ Coverage analysis completed (target: 95%)"
-        fi
-        
-        echo "✅ Tests and coverage analysis completed successfully"
-
-    - name: Verify Coverage Files
-      run: |
-        echo "📁 === VERIFYING COVERAGE FILES ==="
-        ls -la *.xml || echo "No XML files found"
-        echo ""
-        echo "=== Coverage XML Content (first 15 lines) ==="
-        head -15 coverage.xml || echo "coverage.xml not found"
-        echo ""
-        echo "=== Test Results XML Content (first 10 lines) ==="
-        head -10 test-results.xml || echo "test-results.xml not found"
-        echo "✅ Coverage files verification completed"
-
-    - name: Upload Coverage Reports
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-reports
-        path: |
-          coverage.xml
-          test-results.xml
-          htmlcov/
-
+        echo "🧪 Running tests with coverage..."
+        pytest tests/ --cov=app --cov-report=xml --cov-report=term-missing
+        echo "✅ Tests completed"
+    
     - name: SonarQube Scan
       uses: sonarsource/sonarqube-scan-action@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      continue-on-error: true  # Don't fail workflow if SonarQube has issues
-
-    # TEMPORARILY DISABLED FOR CLEAN DEMO - Quality Gate Check
-    # - name: SonarQube Quality Gate Check
-    #   uses: sonarsource/sonarqube-quality-gate-action@master
-    #   timeout-minutes: 5
-    #   env:
-    #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-    #   continue-on-error: true
-
-    - name: Code Quality Analysis Summary
-      run: |
-        echo "📊 === CODE QUALITY ANALYSIS SUMMARY ==="
-        echo ""
-        echo "✅ Static Code Analysis: Completed successfully"
-        echo "✅ Duplicate Code Detection: 81.8% detected (demonstration)"
-        echo "✅ Security Scan: No issues found"
-        echo "✅ Maintainability Analysis: Completed"
-        echo "✅ Reliability Check: Passed"
-        echo ""
-        echo "📈 Quality Metrics:"
-        echo "   • Test Coverage: 96%+ (exceeds 95% target)"
-        echo "   • Code Duplications: 81.8% (intentional for demo)"
-        echo "   • Security Hotspots: 0% (clean)"
-        echo "   • Reliability Rating: A"
-        echo "   • Maintainability Rating: A"
-        echo ""
-        echo "🔗 Detailed reports available in SonarQube dashboard"
-        echo "✅ Code quality analysis completed successfully"
-
-    - name: Final Workflow Success
-      run: |
-        echo "🎉 === WORKFLOW COMPLETED SUCCESSFULLY ==="
-        echo ""
-        echo "✅ SonarQube analysis completed and uploaded to dashboard."
-        echo "📊 Quality metrics and duplicate code analysis available in SonarQube dashboard."
-        echo "🔗 Dashboard: ${{ secrets.SONAR_HOST_URL }}/dashboard?id=Python_App"
-        echo ""
-        echo "🏆 === FINAL RESULTS SUMMARY ==="
-        echo "   ✅ Spellcheck: Completed successfully"
-        echo "   ✅ Code Linting: Completed successfully"
-        echo "   ✅ Test Coverage: 96%+ (exceeds 95% target)"
-        echo "   ✅ SonarQube Analysis: Completed and uploaded"
-        echo "   ✅ Duplicate Code Detection: 81.8% (demonstration)"
-        echo "   ✅ CI/CD Pipeline: Fully functional"
-        echo "   📊 Coverage Reports: Generated and uploaded"
-        echo ""
-        echo "🎯 ALL PRIMARY OBJECTIVES ACHIEVED SUCCESSFULLY!"
-        echo "🏅 This demonstrates effective code quality monitoring and testing practices."
-        echo ""
-        echo "📋 Manager Demo Summary:"
-        echo "   🔍 Spellcheck and linting integrated"
-        echo "   🧪 Comprehensive test suite with 96%+ coverage"
-        echo "   📊 SonarQube integration for code quality analysis"
-        echo "   🔄 Automated CI/CD pipeline"
-        echo "   📈 Quality metrics tracking and reporting"
-        echo ""
-        echo "💡 Note: SonarQube dashboard shows detailed analysis including"
-        echo "    duplicate code detection for demonstration purposes."
-        
-        # Force successful workflow completion
-        exit 0
+    
+    - name: SonarQube Quality Gate Check
+      uses: sonarsource/sonarqube-quality-gate-action@master
+      timeout-minutes: 5
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      continue-on-error: false
