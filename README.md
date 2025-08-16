@@ -75,3 +75,5 @@ SonarQube analysis displays:
 - If you have further requirements for quality or pipeline modification, feel free to open an issue or reach out.
 
 ---
+
+<!-- Updated for SonarQube quality gate demonstration -->
