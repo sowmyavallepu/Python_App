@@ -76,4 +76,3 @@ SonarQube analysis displays:
 
 ---
 
-<!-- Updated for SonarQube quality gate demonstration -->
