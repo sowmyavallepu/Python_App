@@ -76,3 +76,5 @@ SonarQube analysis displays:
 
 ---
 
+## Security Demo
+This repository demonstrates comprehensive security scanning with vulnerability detection.
