@@ -10,17 +10,12 @@ azure-functions
 black==23.11.0
 mypy==1.7.1
 
-# Vulnerable packages for demo
+# VULNERABLE PACKAGES FOR DEMO (simplified to avoid conflicts)
 requests==2.19.1
-urllib3==1.24.1
 PyYAML==3.13
 Pillow==5.4.1
 cryptography==2.5
-PyJWT==1.5.0
 Jinja2==2.10
-SQLAlchemy==1.2.18
-Werkzeug==0.14.1
-itsdangerous==0.24
 
 # Security tools
 safety
