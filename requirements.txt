@@ -1,4 +1,3 @@
-# Your existing safe dependencies
 fastapi
 uvicorn
 pytest
@@ -11,20 +10,19 @@ azure-functions
 black==23.11.0
 mypy==1.7.1
 
-# ADD THESE VULNERABLE PACKAGES FOR SECURITY DEMO
-# These will trigger security alerts
-requests==2.19.1        # CVE-2018-18074 (HTTP client)
-urllib3==1.24.1         # CVE-2019-11324, CVE-2019-11236 (HTTP)
-PyYAML==3.13            # CVE-2017-18342, CVE-2019-20477 (YAML)
-Pillow==5.4.1           # CVE-2019-16865, CVE-2020-5312 (Images)
-cryptography==2.5       # CVE-2020-25659, CVE-2020-36242 (Crypto)
-PyJWT==1.5.0           # CVE-2017-11424 (JWT tokens)
-Jinja2==2.10            # CVE-2019-10906, CVE-2020-28493 (Templates)
-SQLAlchemy==1.2.18      # CVE-2019-7164, CVE-2019-7548 (Database)
-Werkzeug==0.14.1        # CVE-2019-14806, CVE-2020-28724 (WSGI)
-itsdangerous==0.24      # CVE-2014-8991 (Security utils)
+# Vulnerable packages for demo
+requests==2.19.1
+urllib3==1.24.1
+PyYAML==3.13
+Pillow==5.4.1
+cryptography==2.5
+PyJWT==1.5.0
+Jinja2==2.10
+SQLAlchemy==1.2.18
+Werkzeug==0.14.1
+itsdangerous==0.24
 
-# Security scanning tools
-safety>=2.3.0
-bandit>=1.7.5
-pip-audit>=2.6.1
+# Security tools
+safety
+bandit
+pip-audit
