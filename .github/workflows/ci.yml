@@ -14,35 +14,30 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+        fetch-depth: 0
 
-    # 1. Setup Python
     - name: 🐍 Set up Python 3.9
       uses: actions/setup-python@v4
       with:
         python-version: 3.9
 
-    # 2. Install Dependencies
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest pytest-cov safety bandit
 
-    # 3. Run Tests with Coverage
     - name: 🧪 Run tests with coverage
       run: |
         echo "🧪 Running tests with coverage..."
         pytest --cov=. --cov-report=xml --cov-report=term --cov-report=html -v
 
-    # 4. Package Vulnerability Scan (DETAILED OUTPUT)
     - name: 🔍 Package Vulnerability Scan (Detailed)
       id: safety-check
       run: |
         echo "🛡️ Scanning for vulnerable Python packages..."
         echo "================================================"
         
-        # Run safety check and save results
         safety check --json --output safety-report.json || true
         safety check --output safety-report.txt || true
         
@@ -61,16 +56,15 @@ jobs:
             echo "🚨 DETAILED VULNERABLE PACKAGES:"
             echo "--------------------------------"
             
-            # Show detailed vulnerability information
             jq -r '.[] | "
-🔴 VULNERABILITY FOUND:
-   📦 Package: \(.package) (version \(.installed_version))
-   🚨 Issue: \(.vulnerability)
-   🆔 CVE ID: \(.id)
-   📊 Severity: HIGH
-   🔗 More info: \(.more_info_url // "N/A")
-   💡 Description: \(.advisory // "Security vulnerability detected")
-   ----------------------------------------"' safety-report.json 2>/dev/null || echo "Vulnerabilities found in packages"
+        🔴 VULNERABILITY FOUND:
+           📦 Package: \(.package) (version \(.installed_version))
+           🚨 Issue: \(.vulnerability)
+           🆔 CVE ID: \(.id)
+           📊 Severity: HIGH
+           🔗 More info: \(.more_info_url // "N/A")
+           💡 Description: \(.advisory // "Security vulnerability detected")
+           ----------------------------------------"' safety-report.json 2>/dev/null || echo "Vulnerabilities found in packages"
             
             echo ""
             echo "❌ PACKAGE SECURITY CHECK: FAILED"
@@ -83,14 +77,12 @@ jobs:
           echo "SAFETY_FAILED=false" >> $GITHUB_ENV
         fi
 
-    # 5. Code Security Vulnerability Scan (DETAILED OUTPUT)
     - name: 🛡️ Code Security Vulnerability Scan (Detailed)
       id: bandit-scan
       run: |
         echo "🔍 Scanning code for security vulnerabilities..."
         echo "==============================================="
         
-        # Run bandit and save results in multiple formats
         bandit -r . -f json -o bandit-report.json || true
         bandit -r . -f txt -o bandit-report.txt || true
         bandit -r . || true
@@ -112,40 +104,38 @@ jobs:
           echo "🔵 Low Severity Issues: $low_issues"
           echo ""
           
-          # Show HIGH severity vulnerabilities in detail
           if [ "$high_issues" -gt 0 ]; then
             echo "BANDIT_FAILED=true" >> $GITHUB_ENV
             echo "🚨 HIGH SEVERITY VULNERABILITIES FOUND:"
             echo "--------------------------------------"
             
             jq -r '.results[] | select(.issue_severity == "HIGH") | "
-🔴 HIGH SEVERITY VULNERABILITY:
-   📁 File: \(.filename)
-   📍 Line: \(.line_number)
-   🔍 Test: \(.test_name)
-   🚨 Issue: \(.issue_text)
-   💡 Description: \(.issue_text)
-   ⚠️  Confidence: \(.issue_confidence)
-   🔧 Recommendation: Review and fix this security issue
-   ----------------------------------------"' bandit-report.json 2>/dev/null
+        🔴 HIGH SEVERITY VULNERABILITY:
+           📁 File: \(.filename)
+           📍 Line: \(.line_number)
+           🔍 Test: \(.test_name)
+           🚨 Issue: \(.issue_text)
+           💡 Description: \(.issue_text)
+           ⚠️  Confidence: \(.issue_confidence)
+           🔧 Recommendation: Review and fix this security issue
+           ----------------------------------------"' bandit-report.json 2>/dev/null
           fi
           
-          # Show MEDIUM severity vulnerabilities in detail
           if [ "$medium_issues" -gt 0 ]; then
             echo ""
             echo "🟡 MEDIUM SEVERITY VULNERABILITIES FOUND:"
             echo "----------------------------------------"
             
             jq -r '.results[] | select(.issue_severity == "MEDIUM") | "
-🟡 MEDIUM SEVERITY VULNERABILITY:
-   📁 File: \(.filename)
-   📍 Line: \(.line_number)
-   🔍 Test: \(.test_name)
-   🚨 Issue: \(.issue_text)
-   💡 Description: \(.issue_text)
-   ⚠️  Confidence: \(.issue_confidence)
-   🔧 Recommendation: Consider fixing this security issue
-   ----------------------------------------"' bandit-report.json 2>/dev/null
+        🟡 MEDIUM SEVERITY VULNERABILITY:
+           📁 File: \(.filename)
+           📍 Line: \(.line_number)
+           🔍 Test: \(.test_name)
+           🚨 Issue: \(.issue_text)
+           💡 Description: \(.issue_text)
+           ⚠️  Confidence: \(.issue_confidence)
+           🔧 Recommendation: Consider fixing this security issue
+           ----------------------------------------"' bandit-report.json 2>/dev/null
           fi
           
           if [ "$high_issues" -gt 0 ]; then
@@ -160,29 +150,12 @@ jobs:
           echo "BANDIT_FAILED=false" >> $GITHUB_ENV
         fi
 
-    # 6. SonarQube Analysis
-    - name: 🔍 SonarQube Quality Gate Check
-      uses: sonarqube-quality-gate-action@master
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
     - name: 🔍 SonarQube Scanner
       uses: sonarsource/sonarqube-scan-action@master
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      with:
-        args: >
-          -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
-          -Dsonar.sources=.
-          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
-          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
-          -Dsonar.python.coverage.reportPaths=coverage.xml
-          -Dsonar.python.xunit.reportPath=pytest-results.xml
-          -Dsonar.security.hotspots.inherit=NONE
-          -Dsonar.python.bandit.reportPaths=bandit-report.json
 
-    # 7. Upload Security Reports as Artifacts
     - name: 📤 Upload Security Reports
       uses: actions/upload-artifact@v3
       if: always()
@@ -195,7 +168,6 @@ jobs:
           safety-report.txt
           coverage.xml
 
-    # 8. Enhanced Security Summary with SonarQube Link
     - name: 📊 Security Vulnerability Summary
       if: always()
       run: |
@@ -203,21 +175,18 @@ jobs:
         echo "====================================="
         echo ""
         
-        # Package vulnerabilities
         safety_vulns=${SAFETY_VULNS:-0}
         echo "📦 PACKAGE VULNERABILITIES: $safety_vulns"
         
-        # Code vulnerabilities
         bandit_high=${BANDIT_HIGH:-0}
         bandit_medium=${BANDIT_MEDIUM:-0}
         bandit_low=${BANDIT_LOW:-0}
         echo "🔍 CODE SECURITY ISSUES:"
         echo "   🔴 High Severity: $bandit_high"
-        echo "   🟡 Medium Severity: $bandit_medium"  
+        echo "   🟡 Medium Severity: $bandit_medium"
         echo "   🔵 Low Severity: $bandit_low"
         echo ""
         
-        # Overall status
         total_critical=$((safety_vulns + bandit_high))
         if [ "$total_critical" -gt 0 ]; then
           echo "🚨 OVERALL STATUS: CRITICAL ISSUES FOUND ($total_critical)"
@@ -239,5 +208,5 @@ jobs:
         
         echo ""
         echo "🔗 VIEW DETAILED ANALYSIS:"
-        echo "   • SonarQube Dashboard: ${{ secrets.SONAR_HOST_URL }}/dashboard?id=${{ github.repository_owner }}_${{ github.event.repository.name }}"
+        echo "   • SonarQube Dashboard: ${{ secrets.SONAR_HOST_URL }}/dashboard?id=Python_App"
         echo "   • Security Reports: Available in build artifacts"
