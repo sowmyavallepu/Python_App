@@ -12,12 +12,12 @@ jobs:
     name: 🧪 Tests, Quality & Security Pipeline
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Shallow clones should be disabled for better analysis
     
     - name: Set up Python 3.9
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: 3.9
     
@@ -165,7 +165,7 @@ jobs:
 
     # 11. Upload artifact for deployment job
     - name: 📤 Upload artifact for deployment job
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: deployment-package
         path: |
@@ -174,7 +174,7 @@ jobs:
 
     # 12. Upload Coverage Reports
     - name: 📤 Upload Coverage Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-reports
         path: |
@@ -261,7 +261,7 @@ jobs:
     name: 🚀 Deploy to Production
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: 🚀 Deploy FastAPI Application
       run: |
