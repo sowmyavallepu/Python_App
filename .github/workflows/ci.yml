@@ -150,21 +150,68 @@ jobs:
           echo "BANDIT_FAILED=false" >> $GITHUB_ENV
         fi
 
-    - name: 🔍 SonarQube Scanner
-      uses: sonarsource/sonarqube-scan-action@v4
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      with:
-        projectBaseDir: .
-        args: >
-          -Dsonar.projectKey=Python_App
-          -Dsonar.sources=app
-          -Dsonar.tests=tests
-          -Dsonar.python.coverage.reportPaths=coverage.xml
-          -Dsonar.python.bandit.reportPaths=bandit-report.json
-          -Dsonar.qualitygate.wait=false
-          
+    - name: 🔗 Test SonarQube Connectivity
+      run: |
+        echo "Testing SonarQube connectivity..."
+        echo "Host: ${{ secrets.SONAR_HOST_URL }}"
+        
+        # Test server reachability
+        if curl -f -s -o /dev/null "${{ secrets.SONAR_HOST_URL }}/api/system/status"; then
+          echo "✅ SonarQube server is reachable"
+        else
+          echo "❌ Cannot reach SonarQube server"
+          echo "Please check if server is running at: ${{ secrets.SONAR_HOST_URL }}"
+          exit 1
+        fi
+        
+        # Test authentication
+        if curl -f -s -u "${{ secrets.SONAR_TOKEN }}:" "${{ secrets.SONAR_HOST_URL }}/api/authentication/validate"; then
+          echo "✅ Authentication successful"
+        else
+          echo "❌ Authentication failed"
+          echo "Please check SONAR_TOKEN is valid"
+          exit 1
+        fi
+
+    - name: 🔍 Debug SonarQube Configuration
+      run: |
+        echo "=== SonarQube Debug Information ==="
+        echo "Host URL: ${{ secrets.SONAR_HOST_URL }}"
+        echo "Project files present:"
+        ls -la sonar-project.properties || echo "No sonar-project.properties found"
+        echo "Bandit report:"
+        ls -la bandit-report.json || echo "No bandit-report.json found"
+        echo "Coverage report:"
+        ls -la coverage.xml || echo "No coverage.xml found"
+        echo "Working directory contents:"
+        ls -la
+
+    - name: 🔍 SonarQube Manual Scanner
+      run: |
+        echo "Using manual SonarQube scanner for better compatibility..."
+        
+        # Download compatible scanner version for older SonarQube
+        wget -O sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+        unzip sonar-scanner.zip
+        export PATH=$PATH:$(pwd)/sonar-scanner-4.8.0.2856-linux/bin
+        
+        # Run analysis with comprehensive parameters
+        sonar-scanner \
+          -Dsonar.projectKey=Python_App \
+          -Dsonar.projectName=Python_App \
+          -Dsonar.projectVersion=1.0 \
+          -Dsonar.sources=app \
+          -Dsonar.tests=tests \
+          -Dsonar.sourceEncoding=UTF-8 \
+          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+          -Dsonar.python.coverage.reportPaths=coverage.xml \
+          -Dsonar.python.bandit.reportPaths=bandit-report.json \
+          -Dsonar.qualitygate.wait=false \
+          -Dsonar.scm.provider=git \
+          -Dsonar.exclusions="**/tests/**,**/__pycache__/**,**/venv/**,**/.venv/**" \
+          -X
+
     - name: 📤 Upload Security Reports
       uses: actions/upload-artifact@v4
       if: always()
