@@ -9,33 +9,33 @@ on:
 jobs:
   test-quality-security:
     runs-on: ubuntu-latest
-    name: 🧪 Tests, Quality & Security Pipeline with SonarQube
+    name: Tests, Quality & Security Pipeline with SonarQube
 
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: 🐍 Set up Python 3.9
+    - name: Set up Python 3.9
       uses: actions/setup-python@v4
       with:
         python-version: 3.9
 
-    - name: 📦 Install dependencies
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest pytest-cov safety bandit
 
-    - name: 🧪 Run tests with coverage
+    - name: Run tests with coverage
       run: |
-        echo "🧪 Running tests with coverage..."
+        echo "Running tests with coverage..."
         pytest --cov=. --cov-report=xml --cov-report=term --cov-report=html -v
 
-    - name: 🔍 Package Vulnerability Scan (Detailed)
+    - name: Package Vulnerability Scan (Detailed)
       id: safety-check
       run: |
-        echo "🛡️ Scanning for vulnerable Python packages..."
+        echo "Scanning for vulnerable Python packages..."
         echo "================================================"
         
         safety check --json --output safety-report.json || true
@@ -46,41 +46,41 @@ jobs:
           echo "SAFETY_VULNS=$vuln_count" >> $GITHUB_ENV
           
           echo ""
-          echo "📊 PACKAGE VULNERABILITY SCAN RESULTS:"
+          echo "PACKAGE VULNERABILITY SCAN RESULTS:"
           echo "======================================"
-          echo "🚨 Total Vulnerable Packages: $vuln_count"
+          echo "Total Vulnerable Packages: $vuln_count"
           echo ""
           
           if [ "$vuln_count" -gt 0 ]; then
             echo "SAFETY_FAILED=true" >> $GITHUB_ENV
-            echo "🚨 DETAILED VULNERABLE PACKAGES:"
+            echo "DETAILED VULNERABLE PACKAGES:"
             echo "--------------------------------"
             
             jq -r '.[] | "
-        🔴 VULNERABILITY FOUND:
-           📦 Package: \(.package) (version \(.installed_version))
-           🚨 Issue: \(.vulnerability)
-           🆔 CVE ID: \(.id)
-           📊 Severity: HIGH
-           🔗 More info: \(.more_info_url // "N/A")
-           💡 Description: \(.advisory // "Security vulnerability detected")
+        VULNERABILITY FOUND:
+           Package: \(.package) (version \(.installed_version))
+           Issue: \(.vulnerability)
+           CVE ID: \(.id)
+           Severity: HIGH
+           More info: \(.more_info_url // "N/A")
+           Description: \(.advisory // "Security vulnerability detected")
            ----------------------------------------"' safety-report.json 2>/dev/null || echo "Vulnerabilities found in packages"
             
             echo ""
-            echo "❌ PACKAGE SECURITY CHECK: FAILED"
+            echo "PACKAGE SECURITY CHECK: FAILED"
           else
-            echo "✅ No vulnerable packages detected"
+            echo "No vulnerable packages detected"
             echo "SAFETY_FAILED=false" >> $GITHUB_ENV
           fi
         else
-          echo "✅ No vulnerable packages detected"
+          echo "No vulnerable packages detected"
           echo "SAFETY_FAILED=false" >> $GITHUB_ENV
         fi
 
-    - name: 🛡️ Code Security Vulnerability Scan (Detailed)
+    - name: Code Security Vulnerability Scan (Detailed)
       id: bandit-scan
       run: |
-        echo "🔍 Scanning code for security vulnerabilities..."
+        echo "Scanning code for security vulnerabilities..."
         echo "==============================================="
         
         bandit -r . -f json -o bandit-report.json || true
@@ -97,86 +97,94 @@ jobs:
           echo "BANDIT_LOW=$low_issues" >> $GITHUB_ENV
           
           echo ""
-          echo "📊 CODE SECURITY VULNERABILITY SCAN RESULTS:"
+          echo "CODE SECURITY VULNERABILITY SCAN RESULTS:"
           echo "==========================================="
-          echo "🔴 High Severity Issues: $high_issues"
-          echo "🟡 Medium Severity Issues: $medium_issues"
-          echo "🔵 Low Severity Issues: $low_issues"
+          echo "High Severity Issues: $high_issues"
+          echo "Medium Severity Issues: $medium_issues"
+          echo "Low Severity Issues: $low_issues"
           echo ""
           
           if [ "$high_issues" -gt 0 ]; then
             echo "BANDIT_FAILED=true" >> $GITHUB_ENV
-            echo "🚨 HIGH SEVERITY VULNERABILITIES FOUND:"
+            echo "HIGH SEVERITY VULNERABILITIES FOUND:"
             echo "--------------------------------------"
             
             jq -r '.results[] | select(.issue_severity == "HIGH") | "
-        🔴 HIGH SEVERITY VULNERABILITY:
-           📁 File: \(.filename)
-           📍 Line: \(.line_number)
-           🔍 Test: \(.test_name)
-           🚨 Issue: \(.issue_text)
-           💡 Description: \(.issue_text)
-           ⚠️  Confidence: \(.issue_confidence)
-           🔧 Recommendation: Review and fix this security issue
+        HIGH SEVERITY VULNERABILITY:
+           File: \(.filename)
+           Line: \(.line_number)
+           Test: \(.test_name)
+           Issue: \(.issue_text)
+           Description: \(.issue_text)
+           Confidence: \(.issue_confidence)
+           Recommendation: Review and fix this security issue
            ----------------------------------------"' bandit-report.json 2>/dev/null
           fi
           
           if [ "$medium_issues" -gt 0 ]; then
             echo ""
-            echo "🟡 MEDIUM SEVERITY VULNERABILITIES FOUND:"
+            echo "MEDIUM SEVERITY VULNERABILITIES FOUND:"
             echo "----------------------------------------"
             
             jq -r '.results[] | select(.issue_severity == "MEDIUM") | "
-        🟡 MEDIUM SEVERITY VULNERABILITY:
-           📁 File: \(.filename)
-           📍 Line: \(.line_number)
-           🔍 Test: \(.test_name)
-           🚨 Issue: \(.issue_text)
-           💡 Description: \(.issue_text)
-           ⚠️  Confidence: \(.issue_confidence)
-           🔧 Recommendation: Consider fixing this security issue
+        MEDIUM SEVERITY VULNERABILITY:
+           File: \(.filename)
+           Line: \(.line_number)
+           Test: \(.test_name)
+           Issue: \(.issue_text)
+           Description: \(.issue_text)
+           Confidence: \(.issue_confidence)
+           Recommendation: Consider fixing this security issue
            ----------------------------------------"' bandit-report.json 2>/dev/null
           fi
           
           if [ "$high_issues" -gt 0 ]; then
             echo ""
-            echo "❌ CODE SECURITY CHECK: FAILED (High severity issues found)"
+            echo "CODE SECURITY CHECK: FAILED (High severity issues found)"
           else
-            echo "✅ No high severity vulnerabilities detected"
+            echo "No high severity vulnerabilities detected"
             echo "BANDIT_FAILED=false" >> $GITHUB_ENV
           fi
         else
-          echo "✅ No code security vulnerabilities detected"
+          echo "No code security vulnerabilities detected"
           echo "BANDIT_FAILED=false" >> $GITHUB_ENV
         fi
 
-    - name: 🔗 Test SonarQube Connectivity
+    - name: Set up JDK 17 for SonarQube
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Test SonarQube Connectivity
       run: |
         echo "Testing SonarQube connectivity..."
         echo "Host: ${{ secrets.SONAR_HOST_URL }}"
         
         # Test server reachability
         if curl -f -s -o /dev/null "${{ secrets.SONAR_HOST_URL }}/api/system/status"; then
-          echo "✅ SonarQube server is reachable"
+          echo "SonarQube server is reachable"
         else
-          echo "❌ Cannot reach SonarQube server"
+          echo "Cannot reach SonarQube server"
           echo "Please check if server is running at: ${{ secrets.SONAR_HOST_URL }}"
           exit 1
         fi
         
         # Test authentication
         if curl -f -s -u "${{ secrets.SONAR_TOKEN }}:" "${{ secrets.SONAR_HOST_URL }}/api/authentication/validate"; then
-          echo "✅ Authentication successful"
+          echo "Authentication successful"
         else
-          echo "❌ Authentication failed"
+          echo "Authentication failed"
           echo "Please check SONAR_TOKEN is valid"
           exit 1
         fi
 
-    - name: 🔍 Debug SonarQube Configuration
+    - name: Debug SonarQube Configuration
       run: |
         echo "=== SonarQube Debug Information ==="
         echo "Host URL: ${{ secrets.SONAR_HOST_URL }}"
+        echo "Java version:"
+        java -version
         echo "Project files present:"
         ls -la sonar-project.properties || echo "No sonar-project.properties found"
         echo "Bandit report:"
@@ -186,14 +194,18 @@ jobs:
         echo "Working directory contents:"
         ls -la
 
-    - name: 🔍 SonarQube Manual Scanner
+    - name: SonarQube Manual Scanner
       run: |
-        echo "Using manual SonarQube scanner for better compatibility..."
+        echo "Using manual SonarQube scanner with Java 17..."
         
-        # Download compatible scanner version for older SonarQube
-        wget -O sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+        # Download compatible scanner version
+        wget -O sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
         unzip sonar-scanner.zip
-        export PATH=$PATH:$(pwd)/sonar-scanner-4.8.0.2856-linux/bin
+        export PATH=$PATH:$(pwd)/sonar-scanner-5.0.1.3006-linux/bin
+        
+        # Verify Java version
+        echo "Java version for SonarQube:"
+        java -version
         
         # Run analysis with comprehensive parameters
         sonar-scanner \
@@ -212,7 +224,7 @@ jobs:
           -Dsonar.exclusions="**/tests/**,**/__pycache__/**,**/venv/**,**/.venv/**" \
           -X
 
-    - name: 📤 Upload Security Reports
+    - name: Upload Security Reports
       uses: actions/upload-artifact@v4
       if: always()
       with:
@@ -224,45 +236,45 @@ jobs:
           safety-report.txt
           coverage.xml
 
-    - name: 📊 Security Vulnerability Summary
+    - name: Security Vulnerability Summary
       if: always()
       run: |
-        echo "🛡️ COMPREHENSIVE SECURITY SCAN SUMMARY"
+        echo "COMPREHENSIVE SECURITY SCAN SUMMARY"
         echo "====================================="
         echo ""
         
         safety_vulns=${SAFETY_VULNS:-0}
-        echo "📦 PACKAGE VULNERABILITIES: $safety_vulns"
+        echo "PACKAGE VULNERABILITIES: $safety_vulns"
         
         bandit_high=${BANDIT_HIGH:-0}
         bandit_medium=${BANDIT_MEDIUM:-0}
         bandit_low=${BANDIT_LOW:-0}
-        echo "🔍 CODE SECURITY ISSUES:"
-        echo "   🔴 High Severity: $bandit_high"
-        echo "   🟡 Medium Severity: $bandit_medium"
-        echo "   🔵 Low Severity: $bandit_low"
+        echo "CODE SECURITY ISSUES:"
+        echo "   High Severity: $bandit_high"
+        echo "   Medium Severity: $bandit_medium"
+        echo "   Low Severity: $bandit_low"
         echo ""
         
         total_critical=$((safety_vulns + bandit_high))
         if [ "$total_critical" -gt 0 ]; then
-          echo "🚨 OVERALL STATUS: CRITICAL ISSUES FOUND ($total_critical)"
-          echo "❌ BUILD FAILED: Security vulnerabilities must be addressed"
+          echo "OVERALL STATUS: CRITICAL ISSUES FOUND ($total_critical)"
+          echo "BUILD FAILED: Security vulnerabilities must be addressed"
           echo ""
-          echo "📋 NEXT STEPS:"
+          echo "NEXT STEPS:"
           echo "1. Review detailed vulnerability information above"
           echo "2. Check SonarQube dashboard for additional insights"
           echo "3. Fix high severity vulnerabilities before deployment"
           echo "4. Update vulnerable packages to secure versions"
           exit 1
         elif [ "$bandit_medium" -gt 0 ]; then
-          echo "⚠️  OVERALL STATUS: MEDIUM ISSUES FOUND ($bandit_medium)"
-          echo "✅ BUILD PASSED: But consider addressing medium severity issues"
+          echo "OVERALL STATUS: MEDIUM ISSUES FOUND ($bandit_medium)"
+          echo "BUILD PASSED: But consider addressing medium severity issues"
         else
-          echo "✅ OVERALL STATUS: NO SECURITY ISSUES FOUND"
-          echo "🎉 BUILD PASSED: All security checks successful"
+          echo "OVERALL STATUS: NO SECURITY ISSUES FOUND"
+          echo "BUILD PASSED: All security checks successful"
         fi
         
         echo ""
-        echo "🔗 VIEW DETAILED ANALYSIS:"
+        echo "VIEW DETAILED ANALYSIS:"
         echo "   • SonarQube Dashboard: ${{ secrets.SONAR_HOST_URL }}/dashboard?id=Python_App"
         echo "   • Security Reports: Available in build artifacts"
