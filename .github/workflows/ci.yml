@@ -150,22 +150,21 @@ jobs:
           echo "BANDIT_FAILED=false" >> $GITHUB_ENV
         fi
 
-    # 🔍 SonarQube Scanner - Temporarily disabled
-    # - name: 🔍 SonarQube Scanner
-    #   uses: sonarsource/sonarqube-scan-action@v4
-    #   env:
-    #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-    #   with:
-    #     projectBaseDir: .
-    #     args: >
-    #       -Dsonar.projectKey=Python_App
-    #       -Dsonar.sources=app
-    #       -Dsonar.tests=tests
-    #       -Dsonar.python.coverage.reportPaths=coverage.xml
-    #       -Dsonar.python.bandit.reportPaths=bandit-report.json
-    #       -Dsonar.qualitygate.wait=true
-    
+    - name: 🔍 SonarQube Scanner
+      uses: sonarsource/sonarqube-scan-action@v4
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      with:
+        projectBaseDir: .
+        args: >
+          -Dsonar.projectKey=Python_App
+          -Dsonar.sources=app
+          -Dsonar.tests=tests
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.python.bandit.reportPaths=bandit-report.json
+          -Dsonar.qualitygate.wait=false
+          
     - name: 📤 Upload Security Reports
       uses: actions/upload-artifact@v4
       if: always()
