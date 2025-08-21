@@ -1,19 +1,24 @@
+# Core FastAPI dependencies
 fastapi
 uvicorn
-pytest
-httpx
-pytest-cov
-codespell
-coverage
 starlette
 azure-functions
+
+# Testing and coverage
+pytest
+pytest-cov
+httpx
+coverage
+
+# Code quality and formatting
 black==23.11.0
 mypy==1.7.1
+codespell
 
-# Just one simple vulnerable package that installs cleanly
-requests==2.20.0
-
-# Security tools
+# Security scanning tools
 safety
 bandit
 pip-audit
+
+# Vulnerable package for testing (will trigger security scan)
+requests==2.20.0
