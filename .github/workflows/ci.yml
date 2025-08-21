@@ -213,17 +213,7 @@ jobs:
           exit 1
         fi
 
-    # DEPLOY (only runs if everything passes and on main branch)
-    - name: Deploy to Azure Function App
-      if: github.ref == 'refs/heads/main' && success()
-      id: deploy
-      uses: Azure/functions-action@v1
-      with:
-        app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
-        package: '.'
-        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
-
-    # SONARQUBE ANALYSIS
+    # SONARQUBE ANALYSIS (only runs if security passes)
     - name: Set up JDK 17 for SonarQube
       uses: actions/setup-java@v4
       with:
@@ -259,10 +249,20 @@ jobs:
           -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
           -Dsonar.qualitygate.wait=false
 
-    # UPLOAD REPORTS FOR MANAGER VISIBILITY
+    # DEPLOY (only runs if everything passes and on main branch)
+    - name: Deploy to Azure Function App
+      if: github.ref == 'refs/heads/main' && success()
+      id: deploy
+      uses: Azure/functions-action@v1
+      with:
+        app-name: ${{ secrets.AZURE_FUNCTIONAPP_NAME }}
+        package: '.'
+        publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+
+    # UPLOAD REPORTS ONLY ON FAILURE (for debugging)
     - name: Upload Pipeline Reports
       uses: actions/upload-artifact@v4
-      if: always()
+      if: failure()
       with:
         name: pipeline-reports-${{ github.run_number }}
         path: |
@@ -312,13 +312,13 @@ jobs:
             labels: ['security', 'urgent', 'pipeline-failure']
           });
 
-    # FINAL STATUS REPORT
-    - name: Final Security Status Report
-      if: always()
+    # FAILURE STATUS REPORT (only runs when pipeline fails)
+    - name: Pipeline Failure Report
+      if: failure()
       run: |
         echo ""
-        echo "FINAL SECURITY COMPLIANCE REPORT"
-        echo "================================"
+        echo "PIPELINE FAILED - SECURITY POLICY VIOLATION"
+        echo "==========================================="
         echo "Pipeline Status Summary:"
         echo "  Spell Check: ${{ steps.spell-check.outputs.spell_check_status || 'NOT_RUN' }}"
         echo "  Coverage Test: ${{ steps.coverage-test.outputs.coverage_test_status || 'NOT_RUN' }}"
@@ -332,4 +332,22 @@ jobs:
         
         echo ""
         echo "Manager's Zero-Tolerance Security Policy: ENFORCED"
-        echo "All vulnerabilities must be resolved before production deployment"
+        echo "BUILD BLOCKED - All vulnerabilities must be resolved before production deployment"
+        echo "Pipeline execution halted to prevent insecure code from reaching production"
+
+    # SUCCESS STATUS REPORT (only runs when everything passes)
+    - name: Pipeline Success Report
+      if: success()
+      run: |
+        echo ""
+        echo "PIPELINE SUCCESS - SECURITY COMPLIANCE ACHIEVED"
+        echo "=============================================="
+        echo "Pipeline Status Summary:"
+        echo "  Spell Check: PASSED"
+        echo "  Coverage Test: PASSED - ${{ steps.coverage-test.outputs.coverage_percentage }}"
+        echo "  Security Scan: PASSED - Zero vulnerabilities"
+        echo "  Build: PASSED"
+        echo "  Deploy: ${{ steps.deploy.outputs.deploy_status || 'SKIPPED' }}"
+        echo ""
+        echo "Manager's Zero-Tolerance Security Policy: COMPLIANT"
+        echo "Code approved for production deployment"
