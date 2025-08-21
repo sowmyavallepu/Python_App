@@ -7,10 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  test-quality-security:
+  # SECURITY GATE - Must pass before anything else runs
+  security-gate:
     runs-on: ubuntu-latest
-    name: Tests, Quality & Security Pipeline with SonarQube
-
+    name: Security Gate - Zero Tolerance Policy
+    outputs:
+      security-passed: ${{ steps.final-check.outputs.passed }}
+      coverage-percentage: ${{ steps.coverage-test.outputs.coverage_percentage }}
+    
     steps:
     - uses: actions/checkout@v4
       with:
@@ -34,22 +38,19 @@ jobs:
         mkdir -p pipeline-reports
         if codespell --check-filenames --check-hidden --skip="*.git,*.pyc,__pycache__,*.jpg,*.png,*.svg" . > pipeline-reports/spell-check-report.txt 2>&1; then
           echo "✅ Spell check: PASSED"
-          echo "spell_check_status=PASSED" >> $GITHUB_OUTPUT
         else
           echo "❌ Spell check: FAILED"
-          echo "spell_check_status=FAILED" >> $GITHUB_OUTPUT
           cat pipeline-reports/spell-check-report.txt
           exit 1
         fi
 
-    # COVERAGE TEST - 95% requirement with exclusions
+    # COVERAGE TEST - 95% requirement
     - name: Run tests with 95% coverage requirement
       id: coverage-test
       run: |
         echo "Running tests with 95% coverage requirement..."
         mkdir -p pipeline-reports
         
-        # Run pytest with coverage, excluding low-value files
         if pytest --cov=. \
            --cov-report=xml \
            --cov-report=term \
@@ -59,11 +60,9 @@ jobs:
            -v > pipeline-reports/coverage-report.txt 2>&1; then
           coverage_percentage=$(grep -o 'TOTAL.*[0-9]\+%' pipeline-reports/coverage-report.txt | grep -o '[0-9]\+%' | tail -1 || echo "95%")
           echo "✅ Coverage test: PASSED - $coverage_percentage coverage"
-          echo "coverage_test_status=PASSED" >> $GITHUB_OUTPUT
           echo "coverage_percentage=$coverage_percentage" >> $GITHUB_OUTPUT
         else
           echo "❌ Coverage test: FAILED - Below 95% requirement"
-          echo "coverage_test_status=FAILED" >> $GITHUB_OUTPUT
           cat pipeline-reports/coverage-report.txt
           exit 1
         fi
@@ -76,18 +75,9 @@ jobs:
         echo "=================================================================="
         mkdir -p pipeline-reports
         
-        # Initialize security report
-        echo "# SECURITY VULNERABILITY REPORT" > pipeline-reports/security-detailed-report.md
-        echo "**Scan Date:** $(date)" >> pipeline-reports/security-detailed-report.md
-        echo "**Commit:** ${{ github.sha }}" >> pipeline-reports/security-detailed-report.md
-        echo "**Branch:** ${{ github.ref_name }}" >> pipeline-reports/security-detailed-report.md
-        echo "" >> pipeline-reports/security-detailed-report.md
-        
         # Run comprehensive security scans
         bandit -r . -f json -o pipeline-reports/bandit-report.json --severity-level low || true
-        bandit -r . -f txt -o pipeline-reports/bandit-report.txt || true
         safety check --json --output pipeline-reports/safety-report.json || true
-        safety check --output pipeline-reports/safety-report.txt || true
         pip-audit --format=json --output=pipeline-reports/pip-audit-report.json || true
         
         # Count ALL security issues
@@ -98,18 +88,6 @@ jobs:
         
         bandit_total=$((bandit_high + bandit_medium + bandit_low))
         total_vulnerabilities=$((bandit_total + safety_total))
-        
-        # Log results to detailed report
-        echo "## SECURITY SCAN RESULTS" >> pipeline-reports/security-detailed-report.md
-        echo "**Total Vulnerabilities Found:** $total_vulnerabilities" >> pipeline-reports/security-detailed-report.md
-        echo "" >> pipeline-reports/security-detailed-report.md
-        echo "### Breakdown:" >> pipeline-reports/security-detailed-report.md
-        echo "- **Code Vulnerabilities (Bandit):** $bandit_total" >> pipeline-reports/security-detailed-report.md
-        echo "  - High Severity: $bandit_high" >> pipeline-reports/security-detailed-report.md
-        echo "  - Medium Severity: $bandit_medium" >> pipeline-reports/security-detailed-report.md
-        echo "  - Low Severity: $bandit_low" >> pipeline-reports/security-detailed-report.md
-        echo "- **Package Vulnerabilities (Safety):** $safety_total" >> pipeline-reports/security-detailed-report.md
-        echo "" >> pipeline-reports/security-detailed-report.md
         
         echo ""
         echo "=== COMPREHENSIVE SECURITY SCAN RESULTS ==="
@@ -123,51 +101,8 @@ jobs:
         echo "TOTAL SECURITY ISSUES: $total_vulnerabilities"
         echo ""
         
-        # Show detailed vulnerability information
-        if [ "$bandit_high" -gt 0 ]; then
-          echo "HIGH SEVERITY CODE VULNERABILITIES:" | tee -a pipeline-reports/security-detailed-report.md
-          echo "-----------------------------------" | tee -a pipeline-reports/security-detailed-report.md
-          jq -r '.results[] | select(.issue_severity == "HIGH") | "
-        File: \(.filename)
-        Line: \(.line_number)
-        Issue: \(.issue_text)
-        Confidence: \(.issue_confidence)
-        ----------------------------------------"' pipeline-reports/bandit-report.json 2>/dev/null | tee -a pipeline-reports/security-detailed-report.md
-        fi
-        
-        if [ "$bandit_medium" -gt 0 ]; then
-          echo "MEDIUM SEVERITY CODE VULNERABILITIES:" | tee -a pipeline-reports/security-detailed-report.md
-          echo "------------------------------------" | tee -a pipeline-reports/security-detailed-report.md
-          jq -r '.results[] | select(.issue_severity == "MEDIUM") | "
-        File: \(.filename)
-        Line: \(.line_number)
-        Issue: \(.issue_text)
-        Confidence: \(.issue_confidence)
-        ----------------------------------------"' pipeline-reports/bandit-report.json 2>/dev/null | tee -a pipeline-reports/security-detailed-report.md
-        fi
-        
-        if [ "$safety_total" -gt 0 ]; then
-          echo "PACKAGE VULNERABILITIES:" | tee -a pipeline-reports/security-detailed-report.md
-          echo "-----------------------" | tee -a pipeline-reports/security-detailed-report.md
-          jq -r '.[] | "
-        Package: \(.package) (\(.installed_version))
-        Issue: \(.vulnerability)
-        CVE: \(.id)
-        ----------------------------------------"' pipeline-reports/safety-report.json 2>/dev/null | tee -a pipeline-reports/security-detailed-report.md
-        fi
-        
-        # Set outputs for later steps
-        echo "security_scan_status=$([ $total_vulnerabilities -eq 0 ] && echo 'PASSED' || echo 'FAILED')" >> $GITHUB_OUTPUT
-        echo "vulnerability_count=$total_vulnerabilities" >> $GITHUB_OUTPUT
-        
         # Manager's directive: Zero tolerance for ANY vulnerabilities
         if [ "$total_vulnerabilities" -gt 0 ]; then
-          echo "" >> pipeline-reports/security-detailed-report.md
-          echo "## 🚫 SECURITY POLICY VIOLATION" >> pipeline-reports/security-detailed-report.md
-          echo "**Manager Directive:** Zero vulnerabilities allowed in production" >> pipeline-reports/security-detailed-report.md
-          echo "**Action Required:** BUILD BLOCKED until ALL security issues are resolved" >> pipeline-reports/security-detailed-report.md
-          
-          echo ""
           echo "SECURITY POLICY VIOLATION"
           echo "========================="
           echo "Manager directive: Zero vulnerabilities allowed in production"
@@ -178,26 +113,44 @@ jobs:
           echo "2. Update ALL $safety_total vulnerable packages"
           echo "3. Re-run build after fixes are implemented"
           echo ""
-          echo "Detailed reports available in build artifacts"
-          
-          # Create manager notification
-          echo "# SECURITY ALERT - Pipeline Blocked" > pipeline-reports/manager-notification.md
-          echo "**Project:** ${{ github.repository }}" >> pipeline-reports/manager-notification.md
-          echo "**Date:** $(date)" >> pipeline-reports/manager-notification.md
-          echo "**Developer:** ${{ github.actor }}" >> pipeline-reports/manager-notification.md
-          echo "**Status:** ❌ FAILED" >> pipeline-reports/manager-notification.md
-          echo "**Vulnerabilities Found:** $total_vulnerabilities" >> pipeline-reports/manager-notification.md
-          echo "**Action:** Build blocked pending security fixes" >> pipeline-reports/manager-notification.md
-          
+          echo "PIPELINE EXECUTION TERMINATED"
           exit 1
         fi
         
         echo "SECURITY VALIDATION PASSED"
         echo "========================="
         echo "Zero vulnerabilities detected - code approved for production"
-        echo "✅ Security scan: PASSED" >> pipeline-reports/security-detailed-report.md
 
-    # BUILD STEP (only runs if security passes)
+    # FINAL GATE CHECK
+    - name: Security Gate Final Check
+      id: final-check
+      run: |
+        echo "All security checks passed - authorizing pipeline continuation"
+        echo "passed=true" >> $GITHUB_OUTPUT
+
+  # BUILD AND DEPLOY - Only runs if security gate passes
+  build-and-deploy:
+    needs: security-gate
+    if: needs.security-gate.outputs.security-passed == 'true'
+    runs-on: ubuntu-latest
+    name: Build and Deploy
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # BUILD APPLICATION
     - name: Build Application
       id: build
       run: |
@@ -205,15 +158,13 @@ jobs:
         mkdir -p pipeline-reports
         if python -m py_compile app/*.py > pipeline-reports/build-report.txt 2>&1; then
           echo "✅ Build: PASSED"
-          echo "build_status=PASSED" >> $GITHUB_OUTPUT
         else
           echo "❌ Build: FAILED"
-          echo "build_status=FAILED" >> $GITHUB_OUTPUT
           cat pipeline-reports/build-report.txt
           exit 1
         fi
 
-    # SONARQUBE ANALYSIS (only runs if security passes)
+    # SONARQUBE ANALYSIS
     - name: Set up JDK 17 for SonarQube
       uses: actions/setup-java@v4
       with:
@@ -239,7 +190,6 @@ jobs:
         sonar.tests=tests
         sonar.sourceEncoding=UTF-8
         sonar.python.coverage.reportPaths=coverage.xml
-        sonar.python.bandit.reportPaths=pipeline-reports/bandit-report.json
         sonar.exclusions=**/tests/**,**/__pycache__/**,**/venv/**,**/.venv/**,**/HttpExample/**,**/vulnerable_code_examples.py
         EOF
         
@@ -249,9 +199,9 @@ jobs:
           -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
           -Dsonar.qualitygate.wait=false
 
-    # DEPLOY (only runs if everything passes and on main branch)
+    # DEPLOY TO AZURE
     - name: Deploy to Azure Function App
-      if: github.ref == 'refs/heads/main' && success()
+      if: github.ref == 'refs/heads/main'
       id: deploy
       uses: Azure/functions-action@v1
       with:
@@ -259,95 +209,16 @@ jobs:
         package: '.'
         publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
 
-    # UPLOAD REPORTS ONLY ON FAILURE (for debugging)
-    - name: Upload Pipeline Reports
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: pipeline-reports-${{ github.run_number }}
-        path: |
-          pipeline-reports/
-          htmlcov/
-        retention-days: 30
-
-    # CREATE GITHUB ISSUE ON SECURITY FAILURE (for tracking)
-    - name: Create GitHub Issue on Security Failure
-      if: failure() && steps.security-scan.outputs.security_scan_status == 'FAILED'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const vulnerabilityCount = '${{ steps.security-scan.outputs.vulnerability_count }}';
-          const issueTitle = `🚨 Security Vulnerabilities Found - ${vulnerabilityCount} issues detected`;
-          const issueBody = `
-          # Security Policy Violation Report
-          
-          **Pipeline Run:** #${{ github.run_number }}
-          **Commit:** ${{ github.sha }}
-          **Branch:** ${{ github.ref_name }}
-          **Developer:** ${{ github.actor }}
-          **Date:** ${new Date().toISOString()}
-          
-          ## Summary
-          - **Vulnerabilities Found:** ${vulnerabilityCount}
-          - **Status:** ❌ BUILD BLOCKED
-          - **Policy:** Zero-tolerance security policy violation
-          
-          ## Action Required
-          1. Review detailed security reports in [build artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          2. Fix ALL identified security vulnerabilities
-          3. Update vulnerable dependencies
-          4. Re-run pipeline to verify fixes
-          
-          ## Manager Notification
-          This issue provides visibility into failed pipeline and will be closed when all security issues are resolved.
-          
-          **Auto-generated by Enhanced Security Pipeline**
-          `;
-          
-          github.rest.issues.create({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            title: issueTitle,
-            body: issueBody,
-            labels: ['security', 'urgent', 'pipeline-failure']
-          });
-
-    # FAILURE STATUS REPORT (only runs when pipeline fails)
-    - name: Pipeline Failure Report
-      if: failure()
-      run: |
-        echo ""
-        echo "PIPELINE FAILED - SECURITY POLICY VIOLATION"
-        echo "==========================================="
-        echo "Pipeline Status Summary:"
-        echo "  Spell Check: ${{ steps.spell-check.outputs.spell_check_status || 'NOT_RUN' }}"
-        echo "  Coverage Test: ${{ steps.coverage-test.outputs.coverage_test_status || 'NOT_RUN' }}"
-        echo "  Security Scan: ${{ steps.security-scan.outputs.security_scan_status || 'NOT_RUN' }}"
-        echo "  Build: ${{ steps.build.outputs.build_status || 'NOT_RUN' }}"
-        echo "  Deploy: ${{ steps.deploy.outputs.deploy_status || 'NOT_RUN' }}"
-        
-        if [ "${{ steps.security-scan.outputs.vulnerability_count }}" ]; then
-          echo "  Vulnerabilities Found: ${{ steps.security-scan.outputs.vulnerability_count }}"
-        fi
-        
-        echo ""
-        echo "Manager's Zero-Tolerance Security Policy: ENFORCED"
-        echo "BUILD BLOCKED - All vulnerabilities must be resolved before production deployment"
-        echo "Pipeline execution halted to prevent insecure code from reaching production"
-
-    # SUCCESS STATUS REPORT (only runs when everything passes)
+    # SUCCESS REPORT
     - name: Pipeline Success Report
-      if: success()
       run: |
         echo ""
         echo "PIPELINE SUCCESS - SECURITY COMPLIANCE ACHIEVED"
         echo "=============================================="
-        echo "Pipeline Status Summary:"
-        echo "  Spell Check: PASSED"
-        echo "  Coverage Test: PASSED - ${{ steps.coverage-test.outputs.coverage_percentage }}"
-        echo "  Security Scan: PASSED - Zero vulnerabilities"
-        echo "  Build: PASSED"
-        echo "  Deploy: ${{ steps.deploy.outputs.deploy_status || 'SKIPPED' }}"
+        echo "Security Gate: PASSED - Zero vulnerabilities"
+        echo "Coverage: PASSED - ${{ needs.security-gate.outputs.coverage-percentage }}"
+        echo "Build: PASSED"
+        echo "Deploy: ${{ steps.deploy.outcome || 'SKIPPED' }}"
         echo ""
         echo "Manager's Zero-Tolerance Security Policy: COMPLIANT"
         echo "Code approved for production deployment"
