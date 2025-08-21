@@ -75,8 +75,9 @@ jobs:
         echo "=================================================================="
         mkdir -p pipeline-reports
         
-        # Run comprehensive security scans
-        bandit -r . -f json -o pipeline-reports/bandit-report.json --severity-level low || true
+        # Run comprehensive security scans - exclude test files and common false positives
+        bandit -r . -f json -o pipeline-reports/bandit-report.json --severity-level low \
+          --exclude "./tests/*,./test_*,**/test_*.py,**/tests/*,./vulnerable_code_examples.py,./HttpExample/*" || true
         safety check --json --output pipeline-reports/safety-report.json || true
         pip-audit --format=json --output=pipeline-reports/pip-audit-report.json || true
         
