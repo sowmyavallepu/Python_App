@@ -20,5 +20,5 @@ safety
 bandit
 pip-audit
 
-# Vulnerable package for testing (will trigger security scan)
-requests==2.20.0
+# Fixed secure package version
+requests>=2.31.0
